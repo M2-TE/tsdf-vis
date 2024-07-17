@@ -11,6 +11,12 @@ struct Image {
         vk::ImageUsageFlags usage;
         vk::ImageAspectFlags aspects = vk::ImageAspectFlagBits::eColor;
     };
+    struct WrapInfo {
+        vk::Image image;
+        vk::ImageView image_view;
+        vk::Extent3D extent;
+        vk::ImageAspectFlags aspects;
+    };
     struct TransitionInfo {
         vk::CommandBuffer cmd;
         vk::ImageLayout new_layout;
@@ -19,7 +25,8 @@ struct Image {
         vk::AccessFlags2 src_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
         vk::AccessFlags2 dst_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
     };
-    void init(CreateInfo info) {
+    void init(CreateInfo& info) {
+        _owning = true;
         _format = info.format;
         _extent = info.extent;
         _aspects = info.aspects;
@@ -57,11 +64,21 @@ struct Image {
         _view = info.device.createImageView(info_view);
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
-        vmalloc.destroyImage(_image, _allocation);
-        device.destroyImageView(_view);
+        if (_owning) {
+            vmalloc.destroyImage(_image, _allocation);
+            device.destroyImageView(_view);
+        }
         _last_layout = vk::ImageLayout::eUndefined;
     }
-    void transition_layout(TransitionInfo info) {
+    void wrap(WrapInfo& info) {
+        _owning = false;
+        _image = info.image;
+        _view = info.image_view;
+        _extent = info.extent;
+        _aspects = info.aspects;
+    }
+    
+    void transition_layout(TransitionInfo& info) {
         vk::ImageMemoryBarrier2 image_barrier {
             .srcStageMask = info.src_stage,
             .srcAccessMask = info.src_access,
@@ -85,6 +102,38 @@ struct Image {
         info.cmd.pipelineBarrier2(info_dep);
         _last_layout = info.new_layout;
     }
+    void blit(vk::CommandBuffer cmd, Image& src_image) {
+        vk::ImageBlit2 region {
+            .srcSubresource { 
+                .aspectMask = src_image._aspects,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .srcOffsets = std::array<vk::Offset3D, 2>{ 
+                vk::Offset3D(), 
+                vk::Offset3D(src_image._extent.width, src_image._extent.height, 1) },
+            .dstSubresource { 
+                .aspectMask = _aspects,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstOffsets = std::array<vk::Offset3D, 2>{ 
+                vk::Offset3D(), 
+                vk::Offset3D(_extent.width, _extent.height, 1) },
+        };
+        vk::BlitImageInfo2 info_blit {
+            .srcImage = src_image._image,
+            .srcImageLayout = vk::ImageLayout::eTransferSrcOptimal,
+            .dstImage = _image,
+            .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
+            .regionCount = 1,
+            .pRegions = &region,
+            .filter = vk::Filter::eLinear,
+        };
+        cmd.blitImage2(info_blit);
+    }
     
     vma::Allocation _allocation;
     vk::Image _image;
@@ -93,4 +142,5 @@ struct Image {
     vk::Format _format;
     vk::ImageAspectFlags _aspects;
     vk::ImageLayout _last_layout = vk::ImageLayout::eUndefined;
+    bool _owning;
 };

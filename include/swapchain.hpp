@@ -61,10 +61,14 @@ public:
         auto tmp_images = vkb_swapchain.get_images().value();
         auto tmp_views = vkb_swapchain.get_image_views().value();
         _images.resize(tmp_images.size());
-        _image_views.resize(tmp_views.size());
         for (std::size_t i = 0; i < tmp_images.size(); i++) {
-            _images[i] = tmp_images[i];
-            _image_views[i] = tmp_views[i];
+            Image::WrapInfo info_wrap {
+                .image = tmp_images[i],
+                .image_view = tmp_views[i],
+                .extent = { _extent.width, _extent.height, 0 },
+                .aspects = vk::ImageAspectFlagBits::eColor
+            };
+            _images[i].wrap(info_wrap);
         }
         
         // Vulkan: create command pools and buffers
@@ -77,7 +81,7 @@ public:
     }
     void destroy(vk::Device device) {
         for (auto& frame: _frames) frame.destroy(device);
-        for (auto& view: _image_views) device.destroyImageView(view);
+        for (auto& image: _images) device.destroyImageView(image._view);
         device.destroySwapchainKHR(_swapchain);
     }
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) { // TODO: proper resize
@@ -96,7 +100,6 @@ public:
         for (vk::Result result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
             std::tie(result, swap_index) = device.acquireNextImageKHR(_swapchain, UINT64_MAX, frame._sema_swap_acquire);
         }
-        
         
         // restart command buffer
         vk::CommandBuffer cmd = frame._command_buffer;
@@ -117,7 +120,6 @@ public:
         src_image.transition_layout(info_transition);
         ImGui::impl::draw(cmd, src_image._view, info_transition.new_layout, _extent);
         
-        
         // transition source image layout for upcoming blit
         info_transition = {
             .cmd = cmd,
@@ -128,80 +130,29 @@ public:
             .dst_access = vk::AccessFlagBits2::eMemoryRead,
         };
         src_image.transition_layout(info_transition);
-        
         // transition swapchain image layout for upcoming blit
-        vk::ImageMemoryBarrier2 image_barrier {
-            .srcStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-            .srcAccessMask = vk::AccessFlagBits2::eMemoryRead,
-            .dstStageMask = vk::PipelineStageFlagBits2::eBlit,
-            .dstAccessMask = vk::AccessFlagBits2::eMemoryWrite,
-            .oldLayout = vk::ImageLayout::eUndefined,
-            .newLayout = vk::ImageLayout::eTransferDstOptimal,
-            .image = _images[swap_index],
-            .subresourceRange { 
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eTransferDstOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .dst_stage = vk::PipelineStageFlagBits2::eBlit,
+            .src_access = vk::AccessFlagBits2::eMemoryRead,
+            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
         };
-        vk::DependencyInfo info_dep {
-            .imageMemoryBarrierCount = 1,
-            .pImageMemoryBarriers = &image_barrier,  
-        };
-        cmd.pipelineBarrier2(info_dep);
-        
+        _images[swap_index].transition_layout(info_transition);
         // perform blit from source to swapchain image
-        vk::ImageBlit2 region {
-            .srcSubresource { 
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .srcOffsets = std::array<vk::Offset3D, 2>{ 
-                vk::Offset3D(), 
-                vk::Offset3D(src_image._extent.width, src_image._extent.height, 1) },
-            .dstSubresource { 
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-            .dstOffsets = std::array<vk::Offset3D, 2>{ 
-                vk::Offset3D(), 
-                vk::Offset3D(_extent.width, _extent.height, 1) },
-        };
-        vk::BlitImageInfo2 info_blit {
-            .srcImage = src_image._image,
-            .srcImageLayout = vk::ImageLayout::eTransferSrcOptimal,
-            .dstImage = _images[swap_index],
-            .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
-            .regionCount = 1,
-            .pRegions = &region,
-            .filter = vk::Filter::eLinear,
-        };
-        cmd.blitImage2(info_blit);
+        _images[swap_index].blit(cmd, src_image);
         
         // transition swapchain image into presentation layout
-        image_barrier = {
-            .srcStageMask = vk::PipelineStageFlagBits2::eBlit,
-            .srcAccessMask = vk::AccessFlagBits2::eMemoryWrite,
-            .dstStageMask = vk::PipelineStageFlagBits2::eAllCommands,
-            .dstAccessMask = vk::AccessFlagBits2::eMemoryRead,
-            .oldLayout = vk::ImageLayout::eTransferDstOptimal,
-            .newLayout = vk::ImageLayout::ePresentSrcKHR,
-            .image = _images[swap_index],
-            .subresourceRange {
-                .aspectMask = vk::ImageAspectFlagBits::eColor,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::ePresentSrcKHR,
+            .src_stage = vk::PipelineStageFlagBits2::eBlit,
+            .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .src_access = vk::AccessFlagBits2::eMemoryWrite,
+            .dst_access = vk::AccessFlagBits2::eMemoryRead,
         };
-        cmd.pipelineBarrier2(info_dep);
+        _images[swap_index].transition_layout(info_transition);
         cmd.end();
         
         // submit command buffer to graphics queue
@@ -253,8 +204,7 @@ public:
     
 public:
     vk::SwapchainKHR _swapchain;
-    std::vector<vk::Image> _images;
-    std::vector<vk::ImageView> _image_views;
+    std::vector<Image> _images;
     vk::Extent2D _extent;
     vk::Format _format;
     vk::Queue _presentation_queue;
