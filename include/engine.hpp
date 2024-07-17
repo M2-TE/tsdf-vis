@@ -111,6 +111,7 @@ public:
         _window.destroy(_instance);
         _instance.destroy();
     }
+    
     void execute_event(const SDL_Event* p_event) {
         ImGui::impl::process_event(p_event);
         switch (p_event->type) {
