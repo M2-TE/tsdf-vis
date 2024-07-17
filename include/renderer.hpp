@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cmath>
 //
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
@@ -7,6 +8,7 @@
 #include "image.hpp"
 #include "queues.hpp"
 #include "swapchain.hpp"
+#include "pipeline.hpp"
 
 class Renderer {
     struct FrameData {
@@ -71,9 +73,9 @@ public:
         };
         _dst_image.init(info_image);
         
-        // // create shader pipeline
-        // computePipe.init(device, "gradient.comp");
-        // computePipe.write_descriptor(device, 0, 0, image);
+        // create shader pipeline
+        _pipe_compute.init(device, "gradient.comp");
+        _pipe_compute.write_descriptor(device, 0, 0, _dst_image);
 
         // // create graphics pipeline
         // graphicsPipe.init(device, extent, "default.vert", "default.frag");
@@ -82,7 +84,7 @@ public:
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _frames) frame.destroy(device);
         _dst_image.destroy(device, vmalloc);
-        // computePipe.destroy(device);
+        _pipe_compute.destroy(device);
         // graphicsPipe.destroy(device);
     }
     void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) { // todo: proper resize
@@ -130,8 +132,22 @@ public:
     }
     
 private:
-    void draw(vk::Device, vk::CommandBuffer) {
-        // todo
+    void draw(vk::Device device, vk::CommandBuffer cmd) {
+        // utils::transition_layout_r_to_w(cmd, swapchain.images[index], lay::eUndefined, lay::eAttachmentOptimal);
+        // utils::transition_layout_w_to_r(cmd, swapchain.images[index], lay::eUndefined, lay::eReadOnlyOptimal);
+        
+        Image::TransitionInfo info_transition {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eGeneral,
+            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .dst_stage = vk::PipelineStageFlagBits2::eComputeShader,
+            .src_access = vk::AccessFlagBits2::eMemoryRead,
+            .dst_access = vk::AccessFlagBits2::eMemoryWrite
+        };
+        _dst_image.transition_layout(info_transition);
+        uint32_t x = std::ceil(_dst_image._extent.width / 16.0f);
+        uint32_t y = std::ceil(_dst_image._extent.height / 16.0f);
+        _pipe_compute.execute(cmd, x, y, 1);
     }
     
 private:
@@ -139,9 +155,8 @@ private:
     uint32_t _sync_frame = 0;
     
     Image _dst_image;
-    // Pipeline::Graphics _pipe_points;
-    // Pipeline::Graphics _pipe_lines;
-    // Pipeline::Graphics _pipe_triangles;
-    // Pipeline::Compute _pipe_compute;
-    
+    Pipeline::Graphics _pipe_points;
+    Pipeline::Graphics _pipe_lines;
+    Pipeline::Graphics _pipe_triangles;
+    Pipeline::Compute _pipe_compute;
 };

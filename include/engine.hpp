@@ -91,7 +91,6 @@ public:
         
         // create renderer
         _queues.init(_device, vkb_device);
-        _renderer.init(_device, _vmalloc, _queues, _window.size());
         _swapchain._resize_requested = true;
         
         // initialize imgui backend

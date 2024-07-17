@@ -20,4 +20,5 @@ include(sdl) # todo: set constant git tag
 include(fmt)
 include(glm)
 include(glsl)
+include(spirv)
 include(imgui) # todo: set constant git tag
