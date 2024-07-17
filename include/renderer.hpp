@@ -9,6 +9,8 @@
 #include "queues.hpp"
 #include "swapchain.hpp"
 #include "pipeline.hpp"
+#include "camera.hpp"
+#include "grid.hpp"
 
 class Renderer {
     struct FrameData {
@@ -55,7 +57,7 @@ class Renderer {
         uint64_t _timeline_val;
     };
 public:
-    void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
+    void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera, Grid& grid) {
         // create FrameData objects
         for (auto& frame: _frames) frame.init(device, queues);
         
@@ -77,21 +79,21 @@ public:
         _pipe_compute.init(device, "gradient.comp");
         _pipe_compute.write_descriptor(device, 0, 0, _dst_image);
 
-        // // create graphics pipeline
-        // graphicsPipe.init(device, extent, "default.vert", "default.frag");
-        // graphicsPipe.write_descriptor(device, 0, 0, camera.buffer, sizeof(Camera::BufferData));
+        // create graphics pipeline
+        _pipe_points.init(device, extent, "default.vert", "default.frag", vk::PolygonMode::ePoint);
+        _pipe_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _frames) frame.destroy(device);
         _dst_image.destroy(device, vmalloc);
         _pipe_compute.destroy(device);
-        // graphicsPipe.destroy(device);
+        _pipe_points.destroy(device);
     }
-    void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) { // todo: proper resize
+    void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera, Grid& grid) { // todo: proper resize
         destroy(device, vmalloc);
-        init(device, vmalloc, queues, extent);
+        init(device, vmalloc, queues, extent, camera, grid);
     }
-    void render(vk::Device device, Swapchain& swapchain, Queues& queues) {
+    void render(vk::Device device, Swapchain& swapchain, Queues& queues, Grid& grid) {
         // wait for command buffer execution
         FrameData& frame = _frames[_sync_frame++ % _frames.size()];
         vk::SemaphoreWaitInfo info_sema_wait {
@@ -110,7 +112,7 @@ public:
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
         };
         cmd.begin(info_cmd_begin);
-        draw(device, cmd);
+        draw(device, cmd, grid);
         cmd.end();
         
         // submit command buffer
@@ -132,22 +134,33 @@ public:
     }
     
 private:
-    void draw(vk::Device device, vk::CommandBuffer cmd) {
+    void draw(vk::Device device, vk::CommandBuffer cmd, Grid& grid) {
         // utils::transition_layout_r_to_w(cmd, swapchain.images[index], lay::eUndefined, lay::eAttachmentOptimal);
         // utils::transition_layout_w_to_r(cmd, swapchain.images[index], lay::eUndefined, lay::eReadOnlyOptimal);
         
+        // Image::TransitionInfo info_transition {
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eGeneral,
+        //     .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eComputeShader,
+        //     .src_access = vk::AccessFlagBits2::eMemoryRead,
+        //     .dst_access = vk::AccessFlagBits2::eMemoryWrite
+        // };
+        // _dst_image.transition_layout(info_transition);
+        // uint32_t x = std::ceil(_dst_image._extent.width / 16.0f);
+        // uint32_t y = std::ceil(_dst_image._extent.height / 16.0f);
+        // _pipe_compute.execute(cmd, x, y, 1);
+        
         Image::TransitionInfo info_transition {
             .cmd = cmd,
-            .new_layout = vk::ImageLayout::eGeneral,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .dst_stage = vk::PipelineStageFlagBits2::eComputeShader,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .src_access = vk::AccessFlagBits2::eMemoryRead,
             .dst_access = vk::AccessFlagBits2::eMemoryWrite
         };
         _dst_image.transition_layout(info_transition);
-        uint32_t x = std::ceil(_dst_image._extent.width / 16.0f);
-        uint32_t y = std::ceil(_dst_image._extent.height / 16.0f);
-        _pipe_compute.execute(cmd, x, y, 1);
+        _pipe_points.execute(cmd, _dst_image, grid);
     }
     
 private:

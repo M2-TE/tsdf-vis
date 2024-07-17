@@ -5,6 +5,7 @@
 #include <fmt/core.h>
 //
 #include "image.hpp"
+#include "grid.hpp"
 
 namespace Pipeline
 {
@@ -54,7 +55,6 @@ namespace Pipeline
 		}
         
 	protected:
-		// TODO
 		auto reflect(vk::Device device, std::span<std::string> shaderPaths)
             -> std::pair<vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>;
 		auto compile(vk::Device device, std::string& path)
@@ -102,7 +102,7 @@ namespace Pipeline
 		}
 	};
 	struct Graphics: Base {
-		void init(vk::Device device, vk::Extent2D extent, std::string vs_path, std::string fs_path) {
+		void init(vk::Device device, vk::Extent2D extent, std::string vs_path, std::string fs_path, vk::PolygonMode mode) {
 			// reflect shader contents
 			std::array<std::string, 2> paths = { vs_path.append(".spv"), fs_path.append(".spv") };
 			auto [bind_desc, attr_descs] = reflect(device, paths);
@@ -168,8 +168,7 @@ namespace Pipeline
 			vk::PipelineRasterizationStateCreateInfo info_rasterization {
 				.depthClampEnable = false,
 				.rasterizerDiscardEnable = false,
-				.polygonMode = vk::PolygonMode::eLine, // line renderer
-				// .polygonMode = vk::PolygonMode::eFill, // primitive renderer
+				.polygonMode = mode,
 				.cullMode = vk::CullModeFlagBits::eBack,
 				.frontFace = vk::FrontFace::eClockwise,
 				.depthBiasEnable = false,
@@ -228,7 +227,7 @@ namespace Pipeline
 			_pipeline = pipeline;
 			_render_area = vk::Rect2D({ 0,0 }, extent);
 		}
-		void execute(vk::CommandBuffer cmd, Image& dst_image) {
+		void execute(vk::CommandBuffer cmd, Image& dst_image, Grid& grid) {
 			// vk::RenderingAttachmentInfo info_depth_attach {
 			// 	// .imageView = nullptr,
 			// 	.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
@@ -257,9 +256,10 @@ namespace Pipeline
 			if (_desc_sets.size() > 0) {
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
 			}
-			//
-			// TODO: draw stuff
-			//
+			// draw beg //
+			cmd.bindVertexBuffers(0, grid._buffer, { 0 });
+			cmd.draw(grid._points.size(), 1, 0, 0);
+			// draw end //
 			cmd.endRendering();
 		}
 	private:
