@@ -9,6 +9,7 @@
 #include "renderer.hpp"
 #include "imgui.hpp"
 #include "input.hpp"
+#include "grid.hpp"
 
 class Engine {
 public:
@@ -79,7 +80,6 @@ public:
         };
         vma::AllocatorCreateInfo info_vmalloc {
             .flags = 
-                vma::AllocatorCreateFlagBits::eBufferDeviceAddress |
                 vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
             .physicalDevice = _phys_device,
             .device = _device,
@@ -91,6 +91,7 @@ public:
         
         // create renderer
         _queues.init(_device, vkb_device);
+        _camera.init(_vmalloc, _queues.i_graphics, _window.size());
         _swapchain._resize_requested = true;
         
         // initialize imgui backend
@@ -99,11 +100,15 @@ public:
         
         _running = true;
         _rendering = true;
+        
+        gridtests();
     }
     void destroy() {
         _device.waitIdle();
         //
         ImGui::impl::shutdown(_device);
+        _grid.destroy(_vmalloc);
+        _camera.destroy(_vmalloc);
         _renderer.destroy(_device, _vmalloc);
         _swapchain.destroy(_device);
         _vmalloc.destroy();
@@ -138,19 +143,33 @@ public:
         
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
-        _renderer.render(_device, _swapchain, _queues);
+        _camera.update(_vmalloc);
+        _renderer.render(_device, _swapchain, _queues, _grid);
     }
     
 private:
+    void gridtests() {
+        _grid.init(_vmalloc, _queues.i_graphics);
+    }
     void rebuild() {
         _device.waitIdle();
         SDL_SyncWindow(_window._p_window);
         
         fmt::println("renderer rebuild triggered");
-        _renderer.resize(_device, _vmalloc, _queues, _window.size());
+        _camera.resize(_window.size());
+        _renderer.resize(_device, _vmalloc, _queues, _window.size(), _camera, _grid);
         _swapchain.resize(_phys_device, _device, _window, _queues);
     }
-    void handle_inputs() {}
+    void handle_inputs() {
+        // fullscreen toggle via F11
+        if (Keys::pressed(SDLK_F11)) _window.toggle_fullscreen();
+        // handle mouse capture
+        if (!Keys::down(SDLK_LALT) && Mouse::pressed(Mouse::ids::left) && !SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(true);
+        if (Keys::pressed(SDLK_LALT) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);
+        if (Keys::released(SDLK_LALT) && !SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(true);
+        if (Keys::pressed(SDLK_ESCAPE) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);
+        // if (Mouse::pressed(Mouse::ids::left)) fmt::println("pressed");
+    }
     
 public:
     bool _running;
@@ -164,4 +183,6 @@ private:
     Queues _queues;
     Swapchain _swapchain;
     Renderer _renderer;
+    Camera _camera;
+    Grid _grid;
 };
