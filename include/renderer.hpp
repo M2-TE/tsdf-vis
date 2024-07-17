@@ -14,14 +14,16 @@ class Renderer {
         uint64_t timeline_val;
     };
 public:
-    void init() {}
+    void init() {
+        
+    }
     void destroy() {}
     
 private:
     void draw() {}
     
 private:
-    // Image dst_image;
+    Image dst_image;
     // Pipeline::Graphics pipe_graphics;
     // Pipeline::Compute pipe_compute;
 };
