@@ -18,11 +18,6 @@ namespace ImGui
             VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr(nullptr, p_function_name);
             return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr(instance, p_function_name);
         }
-        // TODO: TEST
-        // static auto load_fnc_2(const char* p_function_name, void* p_user_data) -> PFN_vkVoidFunction {
-        //     const vk::Device device = *reinterpret_cast<vk::Device*>(p_user_data);
-        //     return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr(device, p_function_name);
-        // }
         void init_sdl(SDL_Window* p_window) {
             ImGui::CreateContext();
             ImGui_ImplSDL3_InitForVulkan(p_window);

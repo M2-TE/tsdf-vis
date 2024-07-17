@@ -6,6 +6,7 @@
 #include "window.hpp"
 #include "queues.hpp"
 #include "swapchain.hpp"
+#include "renderer.hpp"
 #include "imgui.hpp"
 #include "input.hpp"
 
@@ -39,12 +40,13 @@ public:
         // VkBootstrap: select physical device
         vkb::PhysicalDeviceSelector selector(vkb_instance, _window._surface);
         std::vector<const char*> extensions { vk::KHRSwapchainExtensionName };
-        vk::PhysicalDeviceFeatures vk_features { .fillModeNonSolid = true };
-        vk::PhysicalDeviceVulkan11Features vk11_features {};
-        vk::PhysicalDeviceVulkan12Features vk12_features { 
-            .scalarBlockLayout = true,
+        vk::PhysicalDeviceFeatures vk_features { 
+            .fillModeNonSolid = true 
+        };
+        vk::PhysicalDeviceVulkan11Features vk11_features {
+        };
+        vk::PhysicalDeviceVulkan12Features vk12_features {
             .timelineSemaphore = true,
-            .bufferDeviceAddress = true,
         };
         vk::PhysicalDeviceVulkan13Features vk13_features {
             .synchronization2 = true,
@@ -92,9 +94,9 @@ public:
         _swapchain.init(_phys_device, _device, _window, _queues);
         // renderer.init(device, vmalloc, queues, window.size(), scene.camera);
         
-        // // initialize imgui backend
-        // ImGui::backend::init_sdl(window.pWindow);
-        // ImGui::backend::init_vulkan(instance, device, physDevice, queues, vk::Format::eR16G16B16A16Sfloat);
+        // initialize imgui backend
+        ImGui::impl::init_sdl(_window._p_window);
+        ImGui::impl::init_vulkan(_instance, _device, _phys_device, _queues, vk::Format::eR16G16B16A16Sfloat);
         
         _running = true;
         _rendering = true;
@@ -111,16 +113,30 @@ public:
         _instance.destroy();
     }
     void execute_event(const SDL_Event* p_event) {
-        
+        ImGui::impl::process_event(p_event);
+        switch (p_event->type) {
+            // window handling
+            case SDL_EventType::SDL_EVENT_QUIT: _running = false; break;
+            case SDL_EventType::SDL_EVENT_WINDOW_RESTORED: _rendering = true; break;
+            case SDL_EventType::SDL_EVENT_WINDOW_MINIMIZED: _rendering = false; break;
+            case SDL_EventType::SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: _swapchain._resize_requested = true; break;
+            // input handling
+            case SDL_EventType::SDL_EVENT_KEY_UP: Input::register_key_up(p_event->key); break;
+            case SDL_EventType::SDL_EVENT_KEY_DOWN: Input::register_key_down(p_event->key); break;
+            case SDL_EventType::SDL_EVENT_MOUSE_MOTION: Input::register_motion(p_event->motion); break;
+            case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_UP: Input::register_button_up(p_event->button); break;
+            case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_DOWN: Input::register_button_down(p_event->button); break;
+            case SDL_EventType::SDL_EVENT_WINDOW_FOCUS_LOST: Input::flush_all(); break;
+            default: break;
+        }
     }
     void execute_frame() {
         if (_swapchain._resize_requested) rebuild();
-        return;
         
-        // handle_inputs();
-        // Input::flush();
+        handle_inputs();
+        Input::flush();
         
-        // ImGui::impl::new_frame();
+        ImGui::impl::new_frame();
         ImGui::utils::display_fps();
         // renderer.render(device, swapchain, queues, scene);
     }
@@ -140,4 +156,5 @@ private:
     Window _window;
     Queues _queues;
     Swapchain _swapchain;
+    Renderer _renderer;
 };
