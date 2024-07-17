@@ -30,6 +30,7 @@ struct Image {
         _format = info.format;
         _extent = info.extent;
         _aspects = info.aspects;
+        _last_layout = vk::ImageLayout::eUndefined;
         // create image
         vk::ImageCreateInfo info_image {
             .imageType = vk::ImageType::e2D,
@@ -63,19 +64,20 @@ struct Image {
         };
         _view = info.device.createImageView(info_view);
     }
-    void destroy(vk::Device device, vma::Allocator vmalloc) {
-        if (_owning) {
-            vmalloc.destroyImage(_image, _allocation);
-            device.destroyImageView(_view);
-        }
-        _last_layout = vk::ImageLayout::eUndefined;
-    }
     void wrap(WrapInfo& info) {
         _owning = false;
         _image = info.image;
         _view = info.image_view;
         _extent = info.extent;
         _aspects = info.aspects;
+        _last_layout = vk::ImageLayout::eUndefined;
+    }
+    void destroy(vk::Device device, vma::Allocator vmalloc) {
+        if (_owning) {
+            vmalloc.destroyImage(_image, _allocation);
+            device.destroyImageView(_view);
+        }
+        _last_layout = vk::ImageLayout::eUndefined;
     }
     
     void transition_layout(TransitionInfo& info) {
@@ -141,6 +143,6 @@ struct Image {
     vk::Extent3D _extent;
     vk::Format _format;
     vk::ImageAspectFlags _aspects;
-    vk::ImageLayout _last_layout = vk::ImageLayout::eUndefined;
+    vk::ImageLayout _last_layout;
     bool _owning;
 };

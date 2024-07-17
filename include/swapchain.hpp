@@ -84,6 +84,7 @@ public:
         for (auto& image: _images) device.destroyImageView(image._view);
         device.destroySwapchainKHR(_swapchain);
     }
+    
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) { // TODO: proper resize
         destroy(device);
         init(physDevice, device, window, queues);
