@@ -4,6 +4,9 @@
 #include <vk_mem_alloc.hpp>
 //
 #include "window.hpp"
+#include "queues.hpp"
+#include "swapchain.hpp"
+#include "imgui.hpp"
 
 class Engine {
 public:
@@ -65,11 +68,43 @@ public:
         
         // Vulkan: dynamic dispatcher init 3/3
         VULKAN_HPP_DEFAULT_DISPATCHER.init(_device);
+        
+        // VMA: create allocator
+        vma::VulkanFunctions vk_funcs {
+            .vkGetInstanceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
+            .vkGetDeviceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr,
+        };
+        vma::AllocatorCreateInfo info_vmalloc {
+            .flags = 
+                vma::AllocatorCreateFlagBits::eBufferDeviceAddress |
+                vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
+            .physicalDevice = _phys_device,
+            .device = _device,
+            .pVulkanFunctions = &vk_funcs,
+            .instance = _instance,
+            .vulkanApiVersion = vk::ApiVersion13,
+        };
+        _vmalloc = vma::createAllocator(info_vmalloc);
+        
+        // create renderer
+        _queues.init(_device, vkb_device);
+        _swapchain.init(_phys_device, _device, _window, _queues);
+        // renderer.init(device, vmalloc, queues, window.size(), scene.camera);
+        
+        // // initialize imgui backend
+        // ImGui::backend::init_sdl(window.pWindow);
+        // ImGui::backend::init_vulkan(instance, device, physDevice, queues, vk::Format::eR16G16B16A16Sfloat);
+        
+        _running = true;
+        _rendering = true;
     }
     void destroy() {
         _device.waitIdle();
         //
-        // TODO: more
+        ImGui::impl::shutdown(_device);
+        // renderer.destroy(device, vmalloc);
+        _swapchain.destroy(_device);
+        _vmalloc.destroy();
         _device.destroy();
         _window.destroy(_instance);
         _instance.destroy();
@@ -78,7 +113,15 @@ public:
         
     }
     void execute_frame() {
+        if (_swapchain._resize_requested) rebuild();
+        return;
         
+        // handle_inputs();
+        // Input::flush();
+        
+        // ImGui::impl::new_frame();
+        ImGui::utils::display_fps();
+        // renderer.render(device, swapchain, queues, scene);
     }
     
 private:
@@ -94,4 +137,6 @@ private:
     vk::Device _device;
     vma::Allocator _vmalloc;
     Window _window;
+    Queues _queues;
+    Swapchain _swapchain;
 };
