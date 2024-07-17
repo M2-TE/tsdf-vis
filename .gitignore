@@ -1,0 +1,9 @@
+.vs/
+.vscode/
+.cache/
+.clangd
+build/
+out/
+bin/
+CMakeSettings.json
+CMakeUserPresets.json

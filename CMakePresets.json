@@ -1,0 +1,52 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "multi",
+            "displayName": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build",
+            "generator": "Ninja Multi-Config",
+            "condition": {
+                "type": "notEquals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+              }
+        },
+        {
+            "name": "msbuild",
+            "displayName": "MSBuild Multi-Config",
+            "binaryDir": "${sourceDir}/build",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+              }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "release_multi",
+            "displayName": "Release",
+            "configurePreset": "multi",
+            "configuration": "Release"
+        },
+        {
+            "name": "debug_multi",
+            "displayName": "Debug",
+            "configurePreset": "multi",
+            "configuration": "Debug"
+        },
+        {
+            "name": "release_msbuild",
+            "displayName": "Release",
+            "configurePreset": "msbuild",
+            "configuration": "Release"
+        },
+        {
+            "name": "debug_msbuild",
+            "displayName": "Debug",
+            "configurePreset": "msbuild",
+            "configuration": "Debug"
+        }
+    ]
+  }
