@@ -91,8 +91,8 @@ public:
         
         // create renderer
         _queues.init(_device, vkb_device);
-        _swapchain.init(_phys_device, _device, _window, _queues);
-        // renderer.init(device, vmalloc, queues, window.size(), scene.camera);
+        _renderer.init(_device, _vmalloc, _queues, _window.size());
+        _swapchain._resize_requested = true;
         
         // initialize imgui backend
         ImGui::impl::init_sdl(_window._p_window);
@@ -105,7 +105,7 @@ public:
         _device.waitIdle();
         //
         ImGui::impl::shutdown(_device);
-        // renderer.destroy(device, vmalloc);
+        _renderer.destroy(_device, _vmalloc);
         _swapchain.destroy(_device);
         _vmalloc.destroy();
         _device.destroy();
@@ -138,11 +138,18 @@ public:
         
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
-        // renderer.render(device, swapchain, queues, scene);
+        _renderer.render(_device, _swapchain, _queues);
     }
     
 private:
-    void rebuild() {}
+    void rebuild() {
+        _device.waitIdle();
+        SDL_SyncWindow(_window._p_window);
+        
+        fmt::println("renderer rebuild triggered");
+        _renderer.resize(_device, _vmalloc, _queues, _window.size());
+        _swapchain.resize(_phys_device, _device, _window, _queues);
+    }
     void handle_inputs() {}
     
 public:
