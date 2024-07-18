@@ -5,14 +5,15 @@
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
 //
-#include "image.hpp"
-#include "queues.hpp"
-#include "swapchain.hpp"
-#include "pipeline.hpp"
-#include "camera.hpp"
-#include "grid.hpp"
+#include "core/queues.hpp"
+#include "core/swapchain.hpp"
+#include "core/pipeline.hpp"
+#include "components/image.hpp"
+#include "components/camera.hpp"
+#include "components/grid.hpp"
 
 class Renderer {
+    // move this and swapchain thingy to its own header
     struct FrameData {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_pool {
@@ -80,15 +81,21 @@ public:
         _pipe_compute.write_descriptor(device, 0, 0, _dst_image);
 
         // create graphics pipeline
-        _pipe_points.init(device, extent, "default.vert", "default.frag", vk::PolygonMode::ePoint);
-        _pipe_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
+        _pipe_scan_points.init(device, extent, "scan_points.vert", "scan_points.frag", vk::PolygonMode::ePoint);
+        _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
+
+        // create graphics pipeline
+        _pipe_query_points.init(device, extent, "query_points.vert", "query_points.frag", vk::PolygonMode::ePoint);
+        _pipe_query_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _frames) frame.destroy(device);
         _dst_image.destroy(device, vmalloc);
         _pipe_compute.destroy(device);
-        _pipe_points.destroy(device);
+        _pipe_scan_points.destroy(device);
+        _pipe_query_points.destroy(device);
     }
+    
     void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera, Grid& grid) { // todo: proper resize
         destroy(device, vmalloc);
         init(device, vmalloc, queues, extent, camera, grid);
@@ -112,7 +119,7 @@ public:
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
         };
         cmd.begin(info_cmd_begin);
-        draw(device, cmd, grid);
+        execute_pipes(device, cmd, grid);
         cmd.end();
         
         // submit command buffer
@@ -134,33 +141,28 @@ public:
     }
     
 private:
-    void draw(vk::Device device, vk::CommandBuffer cmd, Grid& grid) {
-        // utils::transition_layout_r_to_w(cmd, swapchain.images[index], lay::eUndefined, lay::eAttachmentOptimal);
-        // utils::transition_layout_w_to_r(cmd, swapchain.images[index], lay::eUndefined, lay::eReadOnlyOptimal);
-        
-        // Image::TransitionInfo info_transition {
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eGeneral,
-        //     .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eComputeShader,
-        //     .src_access = vk::AccessFlagBits2::eMemoryRead,
-        //     .dst_access = vk::AccessFlagBits2::eMemoryWrite
-        // };
-        // _dst_image.transition_layout(info_transition);
-        // uint32_t x = std::ceil(_dst_image._extent.width / 16.0f);
-        // uint32_t y = std::ceil(_dst_image._extent.height / 16.0f);
-        // _pipe_compute.execute(cmd, x, y, 1);
-        
+    void execute_pipes(vk::Device device, vk::CommandBuffer cmd, Grid& grid) {
         Image::TransitionInfo info_transition {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .src_access = vk::AccessFlagBits2::eMemoryRead,
-            .dst_access = vk::AccessFlagBits2::eMemoryWrite
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _dst_image.transition_layout(info_transition);      
+        _pipe_scan_points.execute(cmd, _dst_image, grid._scan_points, true);
+        
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
         _dst_image.transition_layout(info_transition);
-        _pipe_points.execute(cmd, _dst_image, grid);
+        _pipe_query_points.execute(cmd, _dst_image, grid._query_points, false);
     }
     
 private:
@@ -168,8 +170,7 @@ private:
     uint32_t _sync_frame = 0;
     
     Image _dst_image;
-    Pipeline::Graphics _pipe_points;
-    Pipeline::Graphics _pipe_lines;
-    Pipeline::Graphics _pipe_triangles;
+    Pipeline::Graphics _pipe_scan_points;
+    Pipeline::Graphics _pipe_query_points;
     Pipeline::Compute _pipe_compute;
 };

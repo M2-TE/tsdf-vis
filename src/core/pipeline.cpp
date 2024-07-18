@@ -8,7 +8,7 @@
 #undef VULKAN_HPP_NO_TO_STRING
 #include <vulkan/vulkan.hpp>
 //
-#include "pipeline.hpp"
+#include "core/pipeline.hpp"
 CMRC_DECLARE(shaders);
 
 static auto FormatSize(VkFormat format) 

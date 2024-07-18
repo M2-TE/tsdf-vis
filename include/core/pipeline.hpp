@@ -4,8 +4,9 @@
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
 //
-#include "image.hpp"
-#include "grid.hpp"
+#include "components/grid.hpp"
+#include "components/image.hpp"
+#include "components/vertices.hpp"
 
 namespace Pipeline
 {
@@ -169,7 +170,7 @@ namespace Pipeline
 				.depthClampEnable = false,
 				.rasterizerDiscardEnable = false,
 				.polygonMode = mode,
-				.cullMode = vk::CullModeFlagBits::eBack,
+				.cullMode = mode == vk::PolygonMode::eFill ? vk::CullModeFlagBits::eBack : vk::CullModeFlagBits::eNone,
 				.frontFace = vk::FrontFace::eClockwise,
 				.depthBiasEnable = false,
 				.lineWidth = 1.0,
@@ -227,7 +228,8 @@ namespace Pipeline
 			_pipeline = pipeline;
 			_render_area = vk::Rect2D({ 0,0 }, extent);
 		}
-		void execute(vk::CommandBuffer cmd, Image& dst_image, Grid& grid) {
+		template<typename VertexType>
+		void execute(vk::CommandBuffer cmd, Image& dst_image, Vertices<VertexType>& vertices, bool clear) {
 			// vk::RenderingAttachmentInfo info_depth_attach {
 			// 	// .imageView = nullptr,
 			// 	.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
@@ -240,8 +242,9 @@ namespace Pipeline
 				.imageView = dst_image._view,
 				.imageLayout = dst_image._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = vk::AttachmentLoadOp::eLoad,
+				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
 				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
@@ -257,8 +260,8 @@ namespace Pipeline
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
 			}
 			// draw beg //
-			cmd.bindVertexBuffers(0, grid._buffer, { 0 });
-			cmd.draw(grid._points.size(), 1, 0, 0);
+			cmd.bindVertexBuffers(0, vertices._buffer, { 0 });
+			cmd.draw(vertices._count, 1, 0, 0);
 			// draw end //
 			cmd.endRendering();
 		}

@@ -3,13 +3,13 @@
 #include <VkBootstrap.h>
 #include <vk_mem_alloc.hpp>
 //
-#include "window.hpp"
-#include "queues.hpp"
-#include "swapchain.hpp"
-#include "renderer.hpp"
-#include "imgui.hpp"
-#include "input.hpp"
-#include "grid.hpp"
+#include "core/window.hpp"
+#include "core/queues.hpp"
+#include "core/swapchain.hpp"
+#include "core/renderer.hpp"
+#include "core/imgui.hpp"
+#include "core/input.hpp"
+#include "components/grid.hpp"
 
 class Engine {
 public:
@@ -128,7 +128,7 @@ public:
             // input handling
             case SDL_EventType::SDL_EVENT_KEY_UP: Input::register_key_up(p_event->key); break;
             case SDL_EventType::SDL_EVENT_KEY_DOWN: Input::register_key_down(p_event->key); break;
-            case SDL_EventType::SDL_EVENT_MOUSE_MOTION: Input::register_motion(p_event->motion); break;
+            case SDL_EventType::SDL_EVENT_MOUSE_MOTION: Input::register_motion(p_event->motion);break;
             case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_UP: Input::register_button_up(p_event->button); break;
             case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_DOWN: Input::register_button_down(p_event->button); break;
             case SDL_EventType::SDL_EVENT_WINDOW_FOCUS_LOST: Input::flush_all(); break;
@@ -137,14 +137,12 @@ public:
     }
     void execute_frame() {
         if (_swapchain._resize_requested) rebuild();
-        
         handle_inputs();
-        Input::flush();
-        
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
         _camera.update(_vmalloc);
         _renderer.render(_device, _swapchain, _queues, _grid);
+        Input::flush();
     }
     
 private:
@@ -168,7 +166,6 @@ private:
         if (Keys::pressed(SDLK_LALT) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);
         if (Keys::released(SDLK_LALT) && !SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(true);
         if (Keys::pressed(SDLK_ESCAPE) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);
-        // if (Mouse::pressed(Mouse::ids::left)) fmt::println("pressed");
     }
     
 public:

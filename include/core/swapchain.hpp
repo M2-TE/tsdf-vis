@@ -2,10 +2,10 @@
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
 //
-#include "window.hpp"
-#include "queues.hpp"
-#include "image.hpp"
-#include "imgui.hpp"
+#include "core/window.hpp"
+#include "core/queues.hpp"
+#include "core/imgui.hpp"
+#include "components/image.hpp"
 
 class Swapchain {
     struct FrameData {

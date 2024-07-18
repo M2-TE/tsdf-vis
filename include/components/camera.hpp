@@ -5,7 +5,7 @@
 #include <vk_mem_alloc.hpp>
 #include <fmt/core.h>
 //
-#include "input.hpp"
+#include "core/input.hpp"
 
 struct Camera {
 	struct BufferData {
@@ -53,7 +53,7 @@ struct Camera {
     }
 	void update(vma::Allocator vmalloc) {
 		// read input for movement and rotation
-		double speed = 0.1;
+		double speed = 0.05;
 		glm::quat q_rot(_rot);
 		if (Keys::down('w')) _pos += q_rot * glm::vec3(0, 0, +speed);
 		if (Keys::down('s')) _pos += q_rot * glm::vec3(0, 0, -speed);
@@ -71,7 +71,7 @@ struct Camera {
 		BufferData data;
 		data.matrix = glm::perspectiveFovLH<float>(glm::radians<float>(_fov), _extent.width, _extent.height, _near, _far);
 		data.matrix = data.matrix * glm::eulerAngleXY(-_rot.x, -_rot.y);
-		data.matrix = glm::translate(data.matrix, _pos);
+		data.matrix = glm::translate(data.matrix, -_pos);
 		
 		// upload data
 		if (_require_staging) fmt::println("ReBAR is required and not present");
@@ -85,7 +85,7 @@ struct Camera {
 	glm::vec3 _rot = { 0, 0, 0 };
 	float _fov = 75;
 	float _near = 0.1;
-	float _far = 100.0;
+	float _far = 4.0;
     // gpu related
     vk::Buffer _buffer;
 	vma::Allocation _allocation;
