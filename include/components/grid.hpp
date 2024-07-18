@@ -1,5 +1,7 @@
 #pragma once
 #include <fstream>
+#include <vector>
+#include <array>
 //
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
@@ -7,6 +9,7 @@
 #include <glm/glm.hpp>
 //
 #include "components/vertices.hpp"
+#include "components/indices.hpp"
 
 struct Grid {
     void init(vma::Allocator vmalloc, uint32_t i_queue) {
@@ -49,6 +52,17 @@ struct Grid {
             }
 			_query_points.init(vmalloc, i_queue, query_points);
 
+            // alloc and read cells (indexing into query points)
+            std::vector<uint32_t> cell_indices;
+            cell_indices.reserve(n_cells); // TODO: multiply with indices per cell
+            for (std::size_t i = 0; i < cell_indices.capacity(); i++) {
+                std::array<uint32_t, 8> cell;
+				file.read(reinterpret_cast<char*>(cell.data()), sizeof(cell));
+                // TODO: insert indices
+
+            }
+			_cells.init(vmalloc, i_queue, cell_indices);
+
             file.close();
         }
         else {
@@ -65,5 +79,5 @@ struct Grid {
 public:
     Vertices<glm::vec3> _scan_points;
     Vertices<std::pair<glm::vec3, float>> _query_points;
-    Vertices<std::array<uint32_t, 8>> _cells;
+    Indices<uint32_t> _cells;
 };

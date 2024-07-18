@@ -265,6 +265,37 @@ namespace Pipeline
 			// draw end //
 			cmd.endRendering();
 		}
+		template<typename VertexType, typename IndexType>
+		void execute(vk::CommandBuffer cmd, Image& dst_image, Vertices<VertexType>& vertices, Indices<IndexType>& indices, bool clear) {
+			vk::RenderingAttachmentInfo info_color_attach {
+				.imageView = dst_image._view,
+				.imageLayout = dst_image._last_layout,
+				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
+				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+			};
+			vk::RenderingInfo info_render {
+				.renderArea = _render_area,
+				.layerCount = 1,
+				.colorAttachmentCount = 1,
+				.pColorAttachments = &info_color_attach,
+				.pDepthAttachment = nullptr,
+				.pStencilAttachment = nullptr,
+			};
+			cmd.beginRendering(info_render);
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+			if (_desc_sets.size() > 0) {
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
+			}
+			// draw beg //
+			cmd.bindVertexBuffers(0, vertices._buffer, { 0 });
+			cmd.bindIndexBuffer(indices._buffer, 0, indices.get_type());
+			cmd.drawIndexed(indices._count, 1, 0, 0, 0);
+			// draw end //
+			cmd.endRendering();
+		}
+	
 	private:
 		vk::Rect2D _render_area;
 	};
