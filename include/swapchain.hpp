@@ -108,52 +108,8 @@ public:
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
         };
         cmd.begin(info_cmd_begin);
-
-        // draw ImGui UI onto input image
-        Image::TransitionInfo info_transition {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite,
-            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
-        };
-        src_image.transition_layout(info_transition);
-        ImGui::impl::draw(cmd, src_image._view, info_transition.new_layout, _extent);
-        
-        // transition source image layout for upcoming blit
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eTransferSrcOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_stage = vk::PipelineStageFlagBits2::eBlit,
-            .src_access = vk::AccessFlagBits2::eMemoryWrite,
-            .dst_access = vk::AccessFlagBits2::eMemoryRead,
-        };
-        src_image.transition_layout(info_transition);
-        // transition swapchain image layout for upcoming blit
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eTransferDstOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .dst_stage = vk::PipelineStageFlagBits2::eBlit,
-            .src_access = vk::AccessFlagBits2::eMemoryRead,
-            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
-        };
-        _images[swap_index].transition_layout(info_transition);
-        // perform blit from source to swapchain image
-        _images[swap_index].blit(cmd, src_image);
-        
-        // transition swapchain image into presentation layout
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::ePresentSrcKHR,
-            .src_stage = vk::PipelineStageFlagBits2::eBlit,
-            .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .src_access = vk::AccessFlagBits2::eMemoryWrite,
-            .dst_access = vk::AccessFlagBits2::eMemoryRead,
-        };
-        _images[swap_index].transition_layout(info_transition);
+        draw_imgui(cmd, src_image);
+        draw_swapchain(cmd, src_image, swap_index);
         cmd.end();
         
         // submit command buffer to graphics queue
@@ -202,7 +158,56 @@ public:
         vk::Result result = _presentation_queue.presentKHR(presentInfo);
         if (result == vk::Result::eErrorOutOfDateKHR) _resize_requested = true;
     }
-    
+
+private:
+    void draw_imgui(vk::CommandBuffer cmd, Image& dst_image) {
+        Image::TransitionInfo info_transition {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite,
+            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
+        };
+        dst_image.transition_layout(info_transition);
+        ImGui::impl::draw(cmd, dst_image._view, info_transition.new_layout, _extent);
+    }
+    void draw_swapchain(vk::CommandBuffer cmd, Image& src_image, uint32_t swap_index) {
+        // transition source image layout for upcoming blit
+        Image::TransitionInfo info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eTransferSrcOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_stage = vk::PipelineStageFlagBits2::eBlit,
+            .src_access = vk::AccessFlagBits2::eMemoryWrite,
+            .dst_access = vk::AccessFlagBits2::eMemoryRead,
+        };
+        src_image.transition_layout(info_transition);
+        // transition swapchain image layout for upcoming blit
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eTransferDstOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .dst_stage = vk::PipelineStageFlagBits2::eBlit,
+            .src_access = vk::AccessFlagBits2::eMemoryRead,
+            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
+        };
+        _images[swap_index].transition_layout(info_transition);
+        // perform blit from source to swapchain image
+        _images[swap_index].blit(cmd, src_image);
+
+        // transition swapchain image into presentation layout
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::ePresentSrcKHR,
+            .src_stage = vk::PipelineStageFlagBits2::eBlit,
+            .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .src_access = vk::AccessFlagBits2::eMemoryWrite,
+            .dst_access = vk::AccessFlagBits2::eMemoryRead,
+        };
+        _images[swap_index].transition_layout(info_transition);
+    }
+
 public:
     vk::SwapchainKHR _swapchain;
     std::vector<Image> _images;
