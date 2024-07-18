@@ -8,28 +8,35 @@
 
 struct Grid {
     void init(vma::Allocator vmalloc, uint32_t i_queue) {
-        std::ifstream file("../fastgrid.grid", std::ifstream::in);
+		std::ifstream file;
+		std::string filepath = "../hashgrid.grid";
+		file.open(filepath, std::ifstream::binary);
         if (file.good()) {
-            std::size_t n_points = 0;
-            std::size_t n_cells = 0;
             float voxelsize = 0;
+            std::size_t n_scan_points = 0;
+            std::size_t n_query_points = 0;
+            std::size_t n_cells = 0;
+			
+			file.read(reinterpret_cast<char*>(&voxelsize), sizeof(float));
+			file.read(reinterpret_cast<char*>(&n_scan_points), sizeof(std::size_t));
+			file.read(reinterpret_cast<char*>(&n_query_points), sizeof(std::size_t));
+			file.read(reinterpret_cast<char*>(&n_cells), sizeof(std::size_t));
             
             // read header
-            file >> n_points;
-            fmt::println("{} points, {} cells, {} voxelsize", n_points, n_cells, voxelsize);
+            fmt::println("voxelsize of: {} with {} scan points, {} query points and {} cells", voxelsize, n_scan_points, n_query_points, n_cells);
             
             // alloc and read points
-            _points.reserve(1000);
-            for (std::size_t i = 0; i < _points.capacity(); i++) {
-                glm::vec4 point;
-                file >> point.x >> point.y >> point.z >> point.w;
-                _points.push_back(point);
-                // fmt::println("{}, {}, {}\t signed distance: {}", point.x, point.y, point.z, point.w);
-            }
+            // _points.reserve(1000);
+            // for (std::size_t i = 0; i < _points.capacity(); i++) {
+            //     glm::vec4 point;
+            //     file >> point.x >> point.y >> point.z >> point.w;
+            //     _points.push_back(point);
+            //     // fmt::println("{}, {}, {}\t signed distance: {}", point.x, point.y, point.z, point.w);
+            // }
             file.close();
         }
         else {
-            fmt::println("unable to read grid: {}", "../fastgrid.grid");
+            fmt::println("unable to read grid: {}", filepath);
             return;
         }
         
