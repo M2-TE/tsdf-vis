@@ -53,7 +53,11 @@ struct Camera {
     }
 	void update(vma::Allocator vmalloc) {
 		// read input for movement and rotation
-		double speed = 0.05;
+		float speed = 0.01;
+		if (Keys::down(SDLK_LCTRL)) speed *= 0.5;
+		if (Keys::down(SDLK_LSHIFT)) speed *= 2.0;
+
+		// move in direction relative to camera
 		glm::quat q_rot(_rot);
 		if (Keys::down('w')) _pos += q_rot * glm::vec3(0, 0, +speed);
 		if (Keys::down('s')) _pos += q_rot * glm::vec3(0, 0, -speed);
@@ -84,8 +88,8 @@ struct Camera {
 	glm::vec3 _pos = { 0, 0, 0 };
 	glm::vec3 _rot = { 0, 0, 0 };
 	float _fov = 75;
-	float _near = 0.1;
-	float _far = 4.0;
+	float _near = 0.01;
+	float _far = 50.0;
     // gpu related
     vk::Buffer _buffer;
 	vma::Allocation _allocation;

@@ -12,5 +12,6 @@ layout(set = 0, binding = 0) uniform Camera {
 void main() {
     gl_Position = vec4(in_position, 1.0);
     gl_Position = camera.matrix * gl_Position;
+    gl_PointSize = 3.0;
     out_signed_distance = in_signed_distance;
 }

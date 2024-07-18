@@ -33,7 +33,7 @@ struct Grid {
             // alloc and read scan points
 			std::vector<glm::vec3> scan_points;
             scan_points.reserve(n_scan_points);
-            for (std::size_t i = 0; i < scan_points.capacity(); i++) {
+            for (std::size_t i = 0; i < n_scan_points; i++) {
                 glm::vec3 scan_point;
 				file.read(reinterpret_cast<char*>(&scan_point), sizeof(glm::vec3));
                 scan_points.push_back(scan_point);
@@ -43,7 +43,7 @@ struct Grid {
 			// alloc and read query points
 			std::vector<std::pair<glm::vec3, float>> query_points;
             query_points.reserve(n_query_points);
-            for (std::size_t i = 0; i < query_points.capacity(); i++) {
+            for (std::size_t i = 0; i < n_query_points; i++) {
                 glm::vec3 position;
 				float signed_distance;
 				file.read(reinterpret_cast<char*>(&position), sizeof(glm::vec3));
@@ -54,12 +54,26 @@ struct Grid {
 
             // alloc and read cells (indexing into query points)
             std::vector<uint32_t> cell_indices;
-            cell_indices.reserve(n_cells); // TODO: multiply with indices per cell
-            for (std::size_t i = 0; i < cell_indices.capacity(); i++) {
+            cell_indices.reserve(n_cells * 8); // TODO: multiply with indices per cell
+            for (std::size_t i = 0; i < n_cells; i++) {
                 std::array<uint32_t, 8> cell;
 				file.read(reinterpret_cast<char*>(cell.data()), sizeof(cell));
-                // TODO: insert indices
-
+                // build cell edge via line strip indices
+                // front side
+                cell_indices.insert(cell_indices.end(), cell.cbegin() + 0, cell.cbegin() + 4);
+                cell_indices.push_back(cell[0]);
+                // back side
+                cell_indices.insert(cell_indices.end(), cell.cbegin() + 4, cell.cbegin() + 8);
+                cell_indices.push_back(cell[4]);
+                cell_indices.push_back(std::numeric_limits<uint32_t>().max()); // restart strip
+                // missing edges
+                cell_indices.push_back(cell[3]);
+                cell_indices.push_back(cell[7]);
+                cell_indices.push_back(cell[6]);
+                cell_indices.push_back(cell[2]);
+                cell_indices.push_back(cell[1]);
+                cell_indices.push_back(cell[5]);
+                cell_indices.push_back(std::numeric_limits<uint32_t>().max()); // restart strip
             }
 			_cells.init(vmalloc, i_queue, cell_indices);
 

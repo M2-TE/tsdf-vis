@@ -149,8 +149,10 @@ namespace Pipeline
 				};
 			}
 			vk::PipelineInputAssemblyStateCreateInfo info_input_assembly {
-				.topology = vk::PrimitiveTopology::eTriangleList,
-				.primitiveRestartEnable = false,
+				.topology = mode == vk::PolygonMode::ePoint ? vk::PrimitiveTopology::ePointList :
+							mode == vk::PolygonMode::eLine  ? vk::PrimitiveTopology::eLineStrip :
+							vk::PrimitiveTopology::eTriangleList,			
+				.primitiveRestartEnable = mode == vk::PolygonMode::eLine ? true : false,
 			};
 			vk::Viewport viewport {
 				.x = 0, .y = 0,
