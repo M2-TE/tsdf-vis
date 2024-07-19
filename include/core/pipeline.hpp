@@ -103,7 +103,7 @@ namespace Pipeline
 		}
 	};
 	struct Graphics: Base {
-		void init(vk::Device device, vk::Extent2D extent, std::string vs_path, std::string fs_path, vk::PolygonMode mode) {
+		void init(vk::Device device, vk::Extent2D extent, std::string vs_path, std::string fs_path, vk::PolygonMode mode, bool enable_blending) {
 			// reflect shader contents
 			std::array<std::string, 2> paths = { vs_path.append(".spv"), fs_path.append(".spv") };
 			auto [bind_desc, attr_descs] = reflect(device, paths);
@@ -190,7 +190,13 @@ namespace Pipeline
 				.stencilTestEnable = false,
 			};
 			vk::PipelineColorBlendAttachmentState info_blend_attach {
-				.blendEnable = false,
+				.blendEnable = enable_blending,
+				.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
+				.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+				.colorBlendOp = vk::BlendOp::eAdd,
+				.srcAlphaBlendFactor = vk::BlendFactor::eOne,
+				.dstAlphaBlendFactor = vk::BlendFactor::eZero,
+				.alphaBlendOp = vk::BlendOp::eAdd,
 				.colorWriteMask = 
 					vk::ColorComponentFlagBits::eR |
 					vk::ColorComponentFlagBits::eG |

@@ -77,11 +77,11 @@ public:
         _dst_image.init(info_image);
 
         // create graphics pipelines
-        _pipe_scan_points.init(device, extent, "scan_points.vert", "scan_points.frag", vk::PolygonMode::ePoint);
+        _pipe_scan_points.init(device, extent, "scan_points.vert", "scan_points.frag", vk::PolygonMode::ePoint, false);
         _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        _pipe_query_points.init(device, extent, "query_points.vert", "query_points.frag", vk::PolygonMode::ePoint);
+        _pipe_query_points.init(device, extent, "query_points.vert", "query_points.frag", vk::PolygonMode::ePoint, false);
         _pipe_query_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        _pipe_cells.init(device, extent, "cells.vert", "cells.frag", vk::PolygonMode::eLine);
+        _pipe_cells.init(device, extent, "cells.vert", "cells.frag", vk::PolygonMode::eLine, true);
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
@@ -150,17 +150,17 @@ private:
         _dst_image.transition_layout(info_transition);      
         _pipe_scan_points.execute(cmd, _dst_image, grid._scan_points, true);
         
-        // draw query points
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
-        };
-        _dst_image.transition_layout(info_transition);
-        _pipe_query_points.execute(cmd, _dst_image, grid._query_points, false);
+        // // draw query points
+        // info_transition = {
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
+        //     .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        //     .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
+        // };
+        // _dst_image.transition_layout(info_transition);
+        // _pipe_query_points.execute(cmd, _dst_image, grid._query_points, false);
         
         // draw cells
         info_transition = {
