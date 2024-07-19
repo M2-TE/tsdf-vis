@@ -15,7 +15,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     list(APPEND SPIRV_BINARY_FILES "${SPIRV}")
 endforeach(GLSL)
 
-FetchContent_Declare(cmrc GIT_REPOSITORY "https://github.com/vector-of-bool/cmrc.git" GIT_TAG "2.0.1" GIT_SHALLOW ON SYSTEM)
+FetchContent_Declare(cmrc GIT_REPOSITORY "https://github.com/vector-of-bool/cmrc.git" GIT_TAG "2.0.1" GIT_SHALLOW ON)
 FetchContent_MakeAvailable(cmrc)
 cmrc_add_resource_library(shaders ALIAS cmrc::shaders WHENCE "${CMAKE_CURRENT_BINARY_DIR}/shaders/" "${SPIRV_BINARY_FILES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE cmrc::shaders)

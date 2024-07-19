@@ -12,7 +12,7 @@ set(GLM_ENABLE_SIMD_SSE4_2      ${SDL_SSE4_2})
 set(GLM_ENABLE_SIMD_AVX         ${SDL_AVX})
 set(GLM_ENABLE_SIMD_AVX2        ${SDL_AVX2})
 set(GLM_ENABLE_SIMD_AVX512F     ${SDL_AVX512F})
-FetchContent_Declare(glm GIT_REPOSITORY "https://github.com/g-truc/glm.git" GIT_TAG "1.0.1" GIT_SHALLOW ON SYSTEM)
+FetchContent_Declare(glm GIT_REPOSITORY "https://github.com/g-truc/glm.git" GIT_TAG "1.0.1" GIT_SHALLOW ON)
 FetchContent_MakeAvailable(glm)
 target_compile_definitions(${PROJECT_NAME} PRIVATE 
     "GLM_FORCE_DEPTH_ZERO_TO_ONE"
