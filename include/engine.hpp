@@ -3,6 +3,7 @@
 #include <VkBootstrap.h>
 #include <vk_mem_alloc.hpp>
 //
+#include "core/device_selector.hpp"
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"
@@ -20,7 +21,7 @@ public:
         // SDL: create window and query required instance extensions
         auto instance_extensions = _window.init(1280, 720);
         
-        // VkBootstrap: create vulkan instance
+        // VkBootstrap: create vulkan instance // TODO: REPLACE VKB
         vkb::InstanceBuilder instance_builder;
         instance_builder.set_app_name(_window._name.c_str())
             .enable_extensions(instance_extensions)
@@ -38,11 +39,16 @@ public:
         // SDL: create window and vulkan surface
         _window.create_surface(_instance, vkb_instance.debug_messenger);
         
+        // Vulkan: select physical device
+        DeviceSelector device_selector;
+        device_selector.init(_instance);
+        exit(0);
+        
         // VkBootstrap: select physical device
         vkb::PhysicalDeviceSelector selector(vkb_instance, _window._surface);
         std::vector<const char*> extensions { vk::KHRSwapchainExtensionName };
         vk::PhysicalDeviceFeatures vk_features { 
-            .fillModeNonSolid = true 
+            .fillModeNonSolid = true
         };
         vk::PhysicalDeviceVulkan11Features vk11_features {
         };
