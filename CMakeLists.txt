@@ -16,7 +16,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
 # fetch project dependencies
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF) # enable git output for FetchContent steps
-set(FETCHCONTENT_UPDATES_DISCONNECTED OFF) # speed up consecutive config runs if set to ON
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON) # speed up consecutive config runs
 include(vk)
 include(vma)
 include(sdl) # todo: set constant git tag

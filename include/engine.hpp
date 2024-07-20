@@ -36,12 +36,29 @@ public:
         // Vulkan: dynamic dispatcher init 2/3
         VULKAN_HPP_DEFAULT_DISPATCHER.init(_instance);
         
-        // SDL: create window and vulkan surface
+        // SDL: create window and vulkan surface TODO: MOVE THIS AND INSTANCE CREATOR INTO WINDOW
         _window.create_surface(_instance, vkb_instance.debug_messenger);
         
         // Vulkan: select physical device
-        DeviceSelector device_selector;
-        device_selector.init(_instance);
+        DeviceSelector device_selector {
+            ._required_major = 1,
+            ._required_minor = 3,
+            ._required_extensions = {
+                vk::KHRSwapchainExtensionName,
+            },
+            ._required_features {
+                .fillModeNonSolid = true,
+            },
+            ._required_vk11_features {},
+            ._required_vk12_features {
+                .timelineSemaphore = true,
+            },
+            ._required_vk13_features {
+                .synchronization2 = true,
+                .dynamicRendering = true,
+            }
+        };
+        device_selector.select(_instance);
         exit(0);
         
         // VkBootstrap: select physical device

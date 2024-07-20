@@ -1,9 +1,9 @@
 find_package(Vulkan REQUIRED COMPONENTS glslangValidator)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders/")
 file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS 
-    "${PROJECT_SOURCE_DIR}/shaders/*.vert"
-    "${PROJECT_SOURCE_DIR}/shaders/*.frag"
-    "${PROJECT_SOURCE_DIR}/shaders/*.comp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.comp")
 foreach(GLSL ${GLSL_SOURCE_FILES})
     get_filename_component(FILE_NAME "${GLSL}" NAME)
     set(SPIRV "${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
