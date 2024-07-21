@@ -7,7 +7,7 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
 	"${vk_hpp_SOURCE_DIR}/"
     "${vk_bootstrap_SOURCE_DIR}/src/")
 target_compile_definitions(${PROJECT_NAME} PRIVATE 
-    "VULKAN_DEBUG_MSG_UTILS" # enable vulkan debug layers
+    "VULKAN_VALIDATION_LAYERS" # enable vulkan validation layers
     "VULKAN_HPP_NO_CONSTRUCTORS"
     "VULKAN_HPP_DISPATCH_LOADER_DYNAMIC"
     "VULKAN_HPP_NO_SPACESHIP_OPERATOR"

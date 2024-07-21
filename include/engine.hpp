@@ -4,7 +4,7 @@
 #include <SDL3/SDL_events.h>
 #include <VkBootstrap.h>
 //
-#include "core/device_selector.hpp"
+#include "utils/device_selector.hpp"
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"
@@ -20,25 +20,10 @@ public:
         VULKAN_HPP_DEFAULT_DISPATCHER.init();
         
         // SDL: create window and query required instance extensions
-        auto instance_extensions = _window.init(1280, 720);
-        
-        // VkBootstrap: create vulkan instance // TODO: REPLACE VKB
-        vkb::InstanceBuilder instance_builder;
-        instance_builder.set_app_name(_window._name.c_str())
-            .enable_extensions(instance_extensions)
-            .use_default_debug_messenger()
-            .require_api_version(1, 3, 0);
-        if (_window.using_debug_msg()) instance_builder.request_validation_layers();
-        auto instance_build = instance_builder.build();
-        if (!instance_build) fmt::println("VkBootstrap error: {}", instance_build.error().message());
-        vkb::Instance& vkb_instance = instance_build.value();
-        _instance = vkb_instance.instance;
+        _instance = _window.init(1280, 720, "TSDF Visualizer");
         
         // Vulkan: dynamic dispatcher init 2/3
         VULKAN_HPP_DEFAULT_DISPATCHER.init(_instance);
-        
-        // SDL: create window and vulkan surface TODO: MOVE THIS AND INSTANCE CREATOR INTO WINDOW
-        _window.create_surface(_instance, vkb_instance.debug_messenger);
         
         // Vulkan: select physical device
         DeviceSelector device_selector {
