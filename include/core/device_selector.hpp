@@ -79,6 +79,9 @@ struct DeviceSelector {
         };
         _required_vk11_features.pNext = &_required_vk12_features;
         _required_vk12_features.pNext = &_required_vk13_features;
+
+        // TEMPORARY FIX FOR VALIDATION LAYERS
+        const char* layer = "VK_LAYER_KHRONOS_validation";
         
         // create device
         auto [info_queues, queue_mappings] = create_queue_infos(physical_device);
@@ -86,6 +89,8 @@ struct DeviceSelector {
             .pNext = &required_features,
             .queueCreateInfoCount = (uint32_t)info_queues.size(),
             .pQueueCreateInfos = info_queues.data(),
+            .enabledLayerCount = 1,
+            .ppEnabledLayerNames = &layer,
             .enabledExtensionCount = (uint32_t)_required_extensions.size(),
             .ppEnabledExtensionNames = _required_extensions.data(),
         };
