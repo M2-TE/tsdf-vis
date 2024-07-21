@@ -1,8 +1,8 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
-#include <VkBootstrap.h>
 #include <vk_mem_alloc.hpp>
 #include <SDL3/SDL_events.h>
+#include <VkBootstrap.h>
 //
 #include "core/device_selector.hpp"
 #include "core/window.hpp"
@@ -138,10 +138,11 @@ public:
         }
     }
     void execute_frame() {
-        if (_swapchain._resize_requested) rebuild();
-        handle_inputs();
+        if (_swapchain._resize_requested) resize();
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
+
+        handle_inputs();
         _camera.update(_vmalloc);
         _renderer.render(_device, _swapchain, _queues, _grid);
         Input::flush();
@@ -151,7 +152,7 @@ private:
     void gridtests() {
         _grid.init(_vmalloc, _queues._family_universal);
     }
-    void rebuild() {
+    void resize() {
         _device.waitIdle();
         SDL_SyncWindow(_window._p_window);
         
