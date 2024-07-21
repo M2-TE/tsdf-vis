@@ -19,9 +19,9 @@ set(FETCHCONTENT_QUIET OFF) # enable git output for FetchContent steps
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON) # speed up consecutive config runs
 include(vk)
 include(vma)
-include(sdl) # todo: set constant git tag
+include(sdl)
 include(fmt)
 include(glm)
 include(glsl)
 include(spirv)
-include(imgui) # todo: set constant git tag
+include(imgui)

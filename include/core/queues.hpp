@@ -1,6 +1,5 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
-#include <VkBootstrap.h>
 
 struct Queues {
     void init(vk::Device device, std::span<uint32_t> queue_mappings) {
