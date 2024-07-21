@@ -68,7 +68,9 @@ struct DeviceSelector {
             return false;
         };
         std::sort(matching_devices.begin(), matching_devices.end(), fnc_sorter);
-        return std::get<0>(matching_devices.front());
+        vk::PhysicalDevice phys_device = std::get<0>(matching_devices.front());
+        fmt::println("Picked device: {}", (const char*)phys_device.getProperties().deviceName);
+        return phys_device;
     }
     auto create_logical_device(vk::PhysicalDevice physical_device, Queues& queues) -> std::pair<vk::Device, std::vector<uint32_t>> {
 
