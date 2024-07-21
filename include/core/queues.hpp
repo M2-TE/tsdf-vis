@@ -3,28 +3,19 @@
 #include <VkBootstrap.h>
 
 struct Queues {
-    void init(vk::Device device, vkb::Device& vkb_device) {
-        // graphics
-        graphics = vkb_device.get_queue(vkb::QueueType::graphics).value();
-        i_graphics = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
-        // compute (dedicated)
-        auto vkb_compute = vkb_device.get_dedicated_queue(vkb::QueueType::compute);
-        compute = graphics;
-        if (vkb_compute) compute = vkb_compute.value();
-        auto i_vkb_compute = vkb_device.get_dedicated_queue_index(vkb::QueueType::compute);
-        i_compute = i_graphics;
-        if (i_vkb_compute) i_compute = vkb_device.get_dedicated_queue_index(vkb::QueueType::compute).value();
-        // transfer (dedicated)
-        auto vkb_transfer = vkb_device.get_dedicated_queue(vkb::QueueType::transfer);
-        transfer = graphics;
-        if (vkb_transfer) transfer = vkb_transfer.value();
-        auto i_vkb_transfer = vkb_device.get_dedicated_queue_index(vkb::QueueType::transfer);
-        i_transfer = i_graphics;
-        if (i_vkb_transfer) i_transfer = vkb_device.get_dedicated_queue_index(vkb::QueueType::transfer).value();
+    void init(vk::Device device, std::span<uint32_t> queue_mappings) {
+        _family_universal = queue_mappings[0];
+        _family_graphics = queue_mappings[1];
+        _family_compute = queue_mappings[2];
+        _family_transfer = queue_mappings[3];
+        _universal = device.getQueue(_family_universal, 0);
+        _graphics = device.getQueue(_family_graphics, 0);
+        _compute = device.getQueue(_family_compute, 0);
+        _transfer = device.getQueue(_family_transfer, 0);
     }
     
-    // queue handles
-    vk::Queue graphics, compute, transfer;
-    // queue indices
-    uint32_t i_graphics, i_compute, i_transfer;
+    // queue handle
+    vk::Queue _universal, _graphics, _compute, _transfer;
+    // queue family index
+    uint32_t _family_universal, _family_graphics, _family_compute, _family_transfer;
 };

@@ -18,7 +18,7 @@ class Renderer {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_pool {
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-                .queueFamilyIndex = queues.i_graphics,
+                .queueFamilyIndex = queues._family_universal,
             };
             _command_pool = device.createCommandPool(info_pool);
 
@@ -130,7 +130,7 @@ public:
             .signalSemaphoreCount = 1,
             .pSignalSemaphores = &frame._timeline,
         };
-        queues.graphics.submit(info_submit);
+        queues._universal.submit(info_submit);
 
         // present drawn image
         swapchain.present(device, _dst_image, frame._timeline, frame._timeline_val);

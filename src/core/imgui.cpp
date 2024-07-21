@@ -53,7 +53,7 @@ namespace ImGui
                 .Instance = instance,
                 .PhysicalDevice = phys_device,
                 .Device = device,
-                .Queue = queues.graphics,
+                .Queue = queues._universal,
                 .DescriptorPool = imgui_desc_pool,
                 .RenderPass = nullptr,
                 .MinImageCount = 3,

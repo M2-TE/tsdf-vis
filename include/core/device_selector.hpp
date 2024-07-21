@@ -1,36 +1,14 @@
 #pragma once
-#include <utility>
-#include <limits>
 #include <set>
+#include <bit>
 //
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
+//
+#include "core/queues.hpp"
 
 struct DeviceSelector {
-    void select(vk::Instance instance) {
-        auto matching_devices = check_physical_devices(instance);
-
-        // create logical device and check for feature support
-        // for (auto& dev_entry: matching_devices) {
-        //     vk::PhysicalDevice phys_device = std::get<0>(dev_entry);
-
-
-            
-        //     // enumerate queue families (todo: move into Queues::init())
-        //     uint32_t i_invalid = std::numeric_limits<uint32_t>().max();
-        //     uint32_t i_universal = i_invalid;
-        //     uint32_t i_graphics = i_invalid;
-        //     uint32_t i_compute = i_invalid;
-        //     uint32_t i_transfer = i_invalid;
-        //     auto queue_props = phys_device.getQueueFamilyProperties();
-        //     for (size_t i = 0; i < queue_props.size(); i++) {
-                
-        //     }
-        // }
-    }
-
-private:
-    auto check_physical_devices(vk::Instance instance) -> std::vector<std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize>> {
+    auto select_physical_device(vk::Instance instance) -> vk::PhysicalDevice {
         // bool: is_discrete, vk::DeviceSize: memory_size
         std::vector<std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize>> matching_devices;
 
@@ -90,8 +68,31 @@ private:
             return false;
         };
         std::sort(matching_devices.begin(), matching_devices.end(), fnc_sorter);
-        return matching_devices;
+        return std::get<0>(matching_devices.front());
     }
+    auto create_logical_device(vk::PhysicalDevice physical_device, Queues& queues) -> std::pair<vk::Device, std::vector<uint32_t>> {
+
+        // set up chain of requested device features
+        vk::PhysicalDeviceFeatures2 required_features {
+            .pNext = &_required_vk11_features,
+            .features = _required_features,
+        };
+        _required_vk11_features.pNext = &_required_vk12_features;
+        _required_vk12_features.pNext = &_required_vk13_features;
+        
+        // create device
+        auto [info_queues, queue_mappings] = create_queue_infos(physical_device);
+        vk::DeviceCreateInfo info_device {
+            .pNext = &required_features,
+            .queueCreateInfoCount = (uint32_t)info_queues.size(),
+            .pQueueCreateInfos = info_queues.data(),
+        };
+
+        vk::Device device = physical_device.createDevice(info_device);
+        return std::make_pair(device, queue_mappings);
+    }
+
+private:
     bool check_api_ver(vk::PhysicalDeviceProperties& props) {
         bool passed_version = true;
         if (vk::apiVersionMajor(props.apiVersion) > _required_major) passed_version = false;
@@ -115,7 +116,7 @@ private:
 
     }
     bool check_features(vk::PhysicalDeviceFeatures& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceFeatures) * sizeof(bool)> FeatureArray;
+        typedef std::array<bool, sizeof(vk::PhysicalDeviceFeatures)> FeatureArray;
         FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
         FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_features);
         bool passed_features = true;
@@ -129,7 +130,7 @@ private:
         return passed_features;
     }
     bool check_features(vk::PhysicalDeviceVulkan11Features& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan11Features) * sizeof(bool)> FeatureArray;
+        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan11Features)> FeatureArray;
         FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
         FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_vk11_features);
         bool passed_features = true;
@@ -143,7 +144,7 @@ private:
         return passed_features;
     }
     bool check_features(vk::PhysicalDeviceVulkan12Features& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan12Features) * sizeof(bool)> FeatureArray;
+        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan12Features)> FeatureArray;
         FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
         FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_vk12_features);
         bool passed_features = true;
@@ -157,7 +158,7 @@ private:
         return passed_features;
     }
     bool check_features(vk::PhysicalDeviceVulkan13Features& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan13Features) * sizeof(bool)> FeatureArray;
+        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan13Features)> FeatureArray;
         FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
         FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_vk13_features);
         bool passed_features = true;
@@ -170,13 +171,76 @@ private:
         else                 fmt::print("[!feat13] ");
         return passed_features;
     }
+    auto create_queue_infos(vk::PhysicalDevice physical_device) -> std::pair<std::vector<vk::DeviceQueueCreateInfo>, std::vector<uint32_t>> {
+        auto queue_families = physical_device.getQueueFamilyProperties();
+        // first: queue family index, second: count of queue capabilities
+        typedef std::pair<uint32_t, uint32_t> QueueCount;
+        std::vector<std::vector<QueueCount>> queue_family_counters { 
+            _required_queues.size()
+        };
+
+        // iterate through all queue families to store relevant ones
+        for (size_t i = 0; i < queue_families.size(); i++) {
+            vk::QueueFlags flags = queue_families[i].queueFlags;
+            uint32_t capability_count = std::popcount((uint32_t)flags);
+            // check if this queue family works for each requested queue
+            for (size_t q = 0; q < _required_queues.size(); q++) {
+                vk::QueueFlags masked = flags & _required_queues[q];
+                if (masked == _required_queues[q]) {
+                    queue_family_counters[q].emplace_back(i, capability_count);
+                }
+            }
+        }
+
+        // favor queues with the least number of capabilities
+        auto fnc_sorter = [](QueueCount& a, QueueCount& b) {
+            return a.second < b.second;
+        };
+        // default queue priority
+        float priority = 1.0f;
+
+        // contains queue family indices for requested queues
+        std::vector<uint32_t> queue_mappings(_required_queues.size());
+        // set up queue create infos with unique family indices
+        std::vector<vk::DeviceQueueCreateInfo> info_queues;
+        for (size_t i = 0; i < _required_queues.size(); i++) {
+            // get the queue with the least flags possible
+            auto& vec = queue_family_counters[i];
+            std::sort(vec.begin(), vec.end(), fnc_sorter);
+            auto [queue_family_index, _] = vec.front();
+
+            // map the requested queue to info_queues
+            queue_mappings[i] = info_queues.size();
+            
+            // emplace each queue family only once
+            for (size_t q = 0; q < info_queues.size(); q++) {
+                uint32_t family = info_queues[q].queueFamilyIndex;
+                // when queue family is already present, update mapping
+                if (family == queue_family_index) {
+                    queue_mappings[i] = q;
+                    break;
+                }
+            }
+
+            // when unique, emplace a new queue family info
+            if (queue_mappings[i] == info_queues.size()) {
+                info_queues.push_back({
+                    .queueFamilyIndex = queue_family_index,
+                    .queueCount = 1,
+                    .pQueuePriorities = &priority,
+                });
+            }
+        }
+        return std::make_pair(info_queues, queue_mappings);
+    }
 
 public:
     uint32_t _required_major;
     uint32_t _required_minor;
-    std::vector<std::string> _required_extensions;
+    std::vector<const char*> _required_extensions;
     vk::PhysicalDeviceFeatures _required_features;
     vk::PhysicalDeviceVulkan11Features _required_vk11_features;
     vk::PhysicalDeviceVulkan12Features _required_vk12_features;
     vk::PhysicalDeviceVulkan13Features _required_vk13_features;
+    std::vector<vk::QueueFlags> _required_queues;
 };

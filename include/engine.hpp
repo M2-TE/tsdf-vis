@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.hpp>
 #include <VkBootstrap.h>
 #include <vk_mem_alloc.hpp>
+#include <SDL3/SDL_events.h>
 //
 #include "core/device_selector.hpp"
 #include "core/window.hpp"
@@ -56,42 +57,20 @@ public:
             ._required_vk13_features {
                 .synchronization2 = true,
                 .dynamicRendering = true,
+            },
+            ._required_queues {
+                vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eTransfer,
+                vk::QueueFlagBits::eGraphics,
+                vk::QueueFlagBits::eCompute,
+                vk::QueueFlagBits::eTransfer,
             }
         };
-        device_selector.select(_instance);
-        exit(0);
-        
-        // VkBootstrap: select physical device
-        vkb::PhysicalDeviceSelector selector(vkb_instance, _window._surface);
-        std::vector<const char*> extensions { vk::KHRSwapchainExtensionName };
-        vk::PhysicalDeviceFeatures vk_features { 
-            .fillModeNonSolid = true
-        };
-        vk::PhysicalDeviceVulkan11Features vk11_features {
-        };
-        vk::PhysicalDeviceVulkan12Features vk12_features {
-            .timelineSemaphore = true,
-        };
-        vk::PhysicalDeviceVulkan13Features vk13_features {
-            .synchronization2 = true,
-            .dynamicRendering = true,
-        };
-        selector.set_minimum_version(1, 3)
-            .set_required_features(vk_features)
-            .add_required_extensions(extensions)
-            .set_required_features_11(vk11_features)
-            .set_required_features_12(vk12_features)
-            .set_required_features_13(vk13_features);
-        auto device_selection = selector.select();
-        if (!device_selection) fmt::println("VkBootstrap error: {}", device_selection.error().message());
-        vkb::PhysicalDevice& vkb_phys_device = device_selection.value();
-        _phys_device = vkb_phys_device.physical_device;
-        
-        // VkBootstrap: create device
-        auto device_builder = vkb::DeviceBuilder(vkb_phys_device).build();
-        if (!device_builder) fmt::println("VkBootstrap error: {}", device_builder.error().message());
-        vkb::Device& vkb_device = device_builder.value();
-        _device = vkb_device.device;
+        _phys_device = device_selector.select_physical_device(_instance);
+
+
+        // Vulkan: create device
+        std::vector<uint32_t> queue_mappings;
+        std::tie(_device, queue_mappings) = device_selector.create_logical_device(_phys_device, _queues);
         
         // Vulkan: dynamic dispatcher init 3/3
         VULKAN_HPP_DEFAULT_DISPATCHER.init(_device);
@@ -112,9 +91,9 @@ public:
         };
         _vmalloc = vma::createAllocator(info_vmalloc);
         
-        // create renderer
-        _queues.init(_device, vkb_device);
-        _camera.init(_vmalloc, _queues.i_graphics, _window.size());
+        // create renderer components
+        _queues.init(_device, queue_mappings);
+        _camera.init(_vmalloc, _queues._family_universal, _window.size());
         _swapchain._resize_requested = true;
         
         // initialize imgui backend
@@ -170,7 +149,7 @@ public:
     
 private:
     void gridtests() {
-        _grid.init(_vmalloc, _queues.i_graphics);
+        _grid.init(_vmalloc, _queues._family_universal);
     }
     void rebuild() {
         _device.waitIdle();

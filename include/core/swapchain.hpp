@@ -12,7 +12,7 @@ class Swapchain {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_command_pool {
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-                .queueFamilyIndex = queues.i_graphics,
+                .queueFamilyIndex = queues._family_universal,
             };
             _command_pool = device.createCommandPool(info_command_pool);
             vk::CommandBufferAllocateInfo bufferInfo {
@@ -72,7 +72,7 @@ public:
         }
         
         // Vulkan: create command pools and buffers
-        _presentation_queue = queues.graphics;
+        _presentation_queue = queues._universal;
         _frames.resize(vkb_swapchain.image_count);
         for (std::size_t i = 0; i < vkb_swapchain.image_count; i++) {
             _frames[i].init(device, queues);
@@ -82,7 +82,9 @@ public:
     void destroy(vk::Device device) {
         for (auto& frame: _frames) frame.destroy(device);
         for (auto& image: _images) device.destroyImageView(image._view);
-        device.destroySwapchainKHR(_swapchain);
+        if (_images.size() > 0) device.destroySwapchainKHR(_swapchain);
+        _frames.clear();
+        _images.clear();
     }
     
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) { // TODO: proper resize
