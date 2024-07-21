@@ -8,8 +8,8 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     "${vk_bootstrap_SOURCE_DIR}/src/")
 target_compile_definitions(${PROJECT_NAME} PRIVATE 
     "VULKAN_VALIDATION_LAYERS" # enable vulkan validation layers
+    "VULKAN_HPP_NO_TO_STRING"
     "VULKAN_HPP_NO_CONSTRUCTORS"
-    "VULKAN_HPP_DISPATCH_LOADER_DYNAMIC"
     "VULKAN_HPP_NO_SPACESHIP_OPERATOR"
-    "VULKAN_HPP_NO_TO_STRING")
+    "VULKAN_HPP_DISPATCH_LOADER_DYNAMIC")
 target_link_libraries(${PROJECT_NAME} PRIVATE vk-bootstrap::vk-bootstrap)

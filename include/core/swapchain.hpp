@@ -44,37 +44,41 @@ class Swapchain {
     };
 public:
     void init(vk::PhysicalDevice phys_device, vk::Device device, Window& window, Queues& queues) {
-        // VkBoostrap: build swapchain
-        vkb::SwapchainBuilder swapchain_builder(phys_device, device, window._surface);
-        swapchain_builder.set_desired_extent(window.size().width, window.size().height)
-            .set_desired_format(vk::SurfaceFormatKHR(vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear))
-            .set_desired_present_mode((VkPresentModeKHR)vk::PresentModeKHR::eFifo)
-            .add_image_usage_flags((VkImageUsageFlags)vk::ImageUsageFlagBits::eTransferDst);
-        auto build = swapchain_builder.build();
-        if (!build) fmt::println("VkBootstrap error: {}", build.error().message());
-        vkb::Swapchain vkb_swapchain = build.value();
-        
-        // get swapchain components
-        _extent = vkb_swapchain.extent;
-        _format = vk::Format(vkb_swapchain.image_format);
-        _swapchain = vkb_swapchain.swapchain;
-        auto tmp_images = vkb_swapchain.get_images().value();
-        auto tmp_views = vkb_swapchain.get_image_views().value();
-        _images.resize(tmp_images.size());
-        for (std::size_t i = 0; i < tmp_images.size(); i++) {
-            Image::WrapInfo info_wrap {
-                .image = tmp_images[i],
-                .image_view = tmp_views[i],
-                .extent = { _extent.width, _extent.height, 0 },
-                .aspects = vk::ImageAspectFlagBits::eColor
-            };
-            _images[i].wrap(info_wrap);
-        }
-        
-        // Vulkan: create command pools and buffers
+        // TODO
+        vk::SurfaceCapabilitiesKHR capabilities = phys_device.getSurfaceCapabilitiesKHR(window._surface);
+        std::vector<vk::SurfaceFormatKHR> formats = phys_device.getSurfaceFormatsKHR(window._surface);
+        std::vector<vk::PresentModeKHR> present_modes = phys_device.getSurfacePresentModesKHR(window._surface);
+        _extent = window.size();
+        _format = vk::Format::eB8G8R8A8Unorm;
         _presentation_queue = queues._universal;
-        _frames.resize(vkb_swapchain.image_count);
-        for (std::size_t i = 0; i < vkb_swapchain.image_count; i++) {
+
+        // create swapchain
+        vk::SwapchainCreateInfoKHR info_swapchain {
+            .surface = window._surface,
+            .minImageCount = std::min(capabilities.minImageCount + 1, capabilities.maxImageCount),
+            .imageFormat = _format,
+            .imageColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear, // TODO
+            .imageExtent = window.size(),
+            .imageArrayLayers = 1,
+            .imageUsage = vk::ImageUsageFlagBits::eTransferDst,
+            .imageSharingMode = vk::SharingMode::eExclusive,
+            .queueFamilyIndexCount = 1,
+            .pQueueFamilyIndices = &queues._family_universal,
+            .preTransform = capabilities.currentTransform,
+            .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+            .presentMode = vk::PresentModeKHR::eFifo,
+            .clipped = true,
+            .oldSwapchain = nullptr,
+        };
+        _swapchain = device.createSwapchainKHR(info_swapchain);
+
+        // retrieve swapchain images (no need for image views)
+        std::vector<vk::Image> images = device.getSwapchainImagesKHR(_swapchain);
+
+        // create command pools and buffers
+        _presentation_queue = queues._universal;
+        _frames.resize(images.size());
+        for (std::size_t i = 0; i < images.size(); i++) {
             _frames[i].init(device, queues);
         }
         _resize_requested = false;
@@ -87,7 +91,7 @@ public:
         _images.clear();
     }
     
-    void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) { // TODO: proper resize
+    void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) {
         destroy(device);
         init(physDevice, device, window, queues);
         fmt::println("resized to: {}x{}", window.size().width, window.size().height);

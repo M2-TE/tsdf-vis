@@ -2,7 +2,6 @@
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
 #include <SDL3/SDL_events.h>
-#include <VkBootstrap.h>
 //
 #include "utils/device_selector.hpp"
 #include "core/window.hpp"

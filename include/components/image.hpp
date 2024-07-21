@@ -54,6 +54,12 @@ struct Image {
             .image = _image,
             .viewType = vk::ImageViewType::e2D,
             .format = _format,
+            .components {
+                .r = vk::ComponentSwizzle::eIdentity,
+                .g = vk::ComponentSwizzle::eIdentity,
+                .b = vk::ComponentSwizzle::eIdentity,
+                .a = vk::ComponentSwizzle::eIdentity,
+            },
             .subresourceRange {
                 .aspectMask = _aspects,
                 .baseMipLevel = 0,
