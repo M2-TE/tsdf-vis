@@ -44,20 +44,36 @@ class Swapchain {
     };
 public:
     void init(vk::PhysicalDevice phys_device, vk::Device device, Window& window, Queues& queues) {
-        // TODO
+        // query swapchain properties
         vk::SurfaceCapabilitiesKHR capabilities = phys_device.getSurfaceCapabilitiesKHR(window._surface);
         std::vector<vk::SurfaceFormatKHR> formats = phys_device.getSurfaceFormatsKHR(window._surface);
-        std::vector<vk::PresentModeKHR> present_modes = phys_device.getSurfacePresentModesKHR(window._surface);
         _extent = window.size();
-        _format = vk::Format::eB8G8R8A8Unorm;
         _presentation_queue = queues._universal;
+        
+        // pick color space and format
+        vk::ColorSpaceKHR color_space = formats.front().colorSpace;
+        _format = formats.front().format;
+        for (auto format: formats) {
+            bool format_requirement = 
+                format.format == vk::Format::eR8G8B8A8Srgb ||
+                format.format == vk::Format::eB8G8R8A8Srgb ||
+                format.format == vk::Format::eR8G8B8Srgb ||
+                format.format == vk::Format::eB8G8R8Srgb;
+            bool color_requirement = 
+                format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+            if (format_requirement && color_requirement) {
+                _format = format.format;
+                color_space = format.colorSpace;
+                break;
+            }
+        }
 
         // create swapchain
         vk::SwapchainCreateInfoKHR info_swapchain {
             .surface = window._surface,
             .minImageCount = std::min(capabilities.minImageCount + 1, capabilities.maxImageCount),
             .imageFormat = _format,
-            .imageColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear, // TODO
+            .imageColorSpace = color_space,
             .imageExtent = window.size(),
             .imageArrayLayers = 1,
             .imageUsage = vk::ImageUsageFlagBits::eTransferDst,
