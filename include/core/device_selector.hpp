@@ -86,6 +86,8 @@ struct DeviceSelector {
             .pNext = &required_features,
             .queueCreateInfoCount = (uint32_t)info_queues.size(),
             .pQueueCreateInfos = info_queues.data(),
+            .enabledExtensionCount = (uint32_t)_required_extensions.size(),
+            .ppEnabledExtensionNames = _required_extensions.data(),
         };
 
         vk::Device device = physical_device.createDevice(info_device);
