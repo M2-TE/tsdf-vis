@@ -72,8 +72,16 @@ public:
         };
         _swapchain = device.createSwapchainKHR(info_swapchain);
 
-        // retrieve swapchain images (no need for image views)
+        // retrieve and wrap swapchain images (no need for views)
         std::vector<vk::Image> images = device.getSwapchainImagesKHR(_swapchain);
+        for (vk::Image image: images) {
+            Image::WrapInfo info_wrap {
+                .image = image,
+                .extent = { _extent.width, _extent.height, 0 },
+                .aspects = vk::ImageAspectFlagBits::eColor
+            };
+            _images.emplace_back().wrap(info_wrap);
+        }
 
         // create command pools and buffers
         _presentation_queue = queues._universal;
