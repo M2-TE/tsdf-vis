@@ -14,7 +14,7 @@
 struct Grid {
     void init(vma::Allocator vmalloc, uint32_t i_queue) {
 		std::ifstream file;
-		std::string filepath = "../hashgrid.grid";
+		std::string filepath = "../hsfd.grid";
 		file.open(filepath, std::ifstream::binary);
         if (file.good()) {
             float voxelsize = 0;
