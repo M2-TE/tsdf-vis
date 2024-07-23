@@ -23,7 +23,6 @@ set(STRICT_COMPILATION OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
 if(MSVC)
-    set(CMAKE_LINKER_TYPE MSVC)
     set(CMAKE_VS_PLATFORM_TOOLSET_HOST_ARCHITECTURE "x64")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>") # static msvc runtime lib
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /Gm- /MP /nologo /diagnostics:classic /FC /fp:except- /Zc:inline /Wall ")
