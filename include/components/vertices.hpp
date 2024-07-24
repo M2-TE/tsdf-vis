@@ -6,14 +6,14 @@
 
 template<typename Vertex>
 struct Vertices {
-    void init(vma::Allocator vmalloc, uint32_t i_queue, std::span<Vertex> vertex_data) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::span<Vertex> vertex_data) {
         // create vertex buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = sizeof(Vertex) * vertex_data.size(),	
 			.usage = vk::BufferUsageFlagBits::eVertexBuffer,
 			.sharingMode = vk::SharingMode::eExclusive,
-			.queueFamilyIndexCount = 1,
-			.pQueueFamilyIndices = &i_queue,
+			.queueFamilyIndexCount = queues.size(),
+			.pQueueFamilyIndices = queues.data(),
 		};
 		vma::AllocationCreateInfo info_allocation {
 			.flags = 

@@ -8,14 +8,14 @@
 
 template<typename Index>
 struct Indices {
-    void init(vma::Allocator vmalloc, uint32_t i_queue, std::span<Index> index_data) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::span<Index> index_data) {
         // create index buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = sizeof(Index) * index_data.size(),	
 			.usage = vk::BufferUsageFlagBits::eIndexBuffer,
 			.sharingMode = vk::SharingMode::eExclusive,
-			.queueFamilyIndexCount = 1,
-			.pQueueFamilyIndices = &i_queue,
+			.queueFamilyIndexCount = queues.size(),
+			.pQueueFamilyIndices = queues.data(),
 		};
 		vma::AllocationCreateInfo info_allocation {
 			.flags = 
