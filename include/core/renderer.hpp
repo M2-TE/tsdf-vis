@@ -10,7 +10,7 @@
 #include "core/pipeline.hpp"
 #include "components/image.hpp"
 #include "components/camera.hpp"
-#include "components/grid.hpp"
+#include "components/scene.hpp"
 
 class Renderer {
     // move this and swapchain thingy to its own header
@@ -58,7 +58,7 @@ class Renderer {
         uint64_t _timeline_val;
     };
 public:
-    void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera, Grid& grid) {
+    void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) {
         // create FrameData objects
         for (auto& frame: _frames) frame.init(device, queues);
         
@@ -92,11 +92,11 @@ public:
         _pipe_cells.destroy(device);
     }
     
-    void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera, Grid& grid) { // todo: proper resize
+    void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) { // todo: proper resize
         destroy(device, vmalloc);
-        init(device, vmalloc, queues, extent, camera, grid);
+        init(device, vmalloc, queues, extent, camera);
     }
-    void render(vk::Device device, Swapchain& swapchain, Queues& queues, Grid& grid) {
+    void render(vk::Device device, Swapchain& swapchain, Queues& queues, Scene& scene) {
         // wait for command buffer execution
         FrameData& frame = _frames[_sync_frame++ % _frames.size()];
         vk::SemaphoreWaitInfo info_sema_wait {
@@ -115,7 +115,7 @@ public:
             .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
         };
         cmd.begin(info_cmd_begin);
-        execute_pipes(device, cmd, grid);
+        execute_pipes(device, cmd, scene);
         cmd.end();
         
         // submit command buffer
@@ -137,9 +137,10 @@ public:
     }
     
 private:
-    void execute_pipes(vk::Device device, vk::CommandBuffer cmd, Grid& grid) {
+    void execute_pipes(vk::Device device, vk::CommandBuffer cmd, Scene& scene) {
         // draw scan points
-        Image::TransitionInfo info_transition {
+        Image::TransitionInfo info_transition;
+        info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
@@ -148,7 +149,7 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _dst_image.transition_layout(info_transition);      
-        _pipe_scan_points.execute(cmd, _dst_image, grid._scan_points, true);
+        _pipe_scan_points.execute(cmd, _dst_image, scene._grid._scan_points, true);
         
         // draw cells
         info_transition = {
@@ -160,7 +161,7 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
         _dst_image.transition_layout(info_transition);
-        _pipe_cells.execute(cmd, _dst_image, grid._query_points, false);
+        _pipe_cells.execute(cmd, _dst_image, scene._grid._query_points, false);
     }
     
 private:

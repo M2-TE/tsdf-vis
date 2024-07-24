@@ -6,7 +6,6 @@
 //
 #include "components/mesh.hpp"
 #include "components/image.hpp"
-#include "components/grid.hpp"
 
 namespace Pipeline
 {
@@ -270,12 +269,12 @@ namespace Pipeline
 			// draw beg //
 			if (mesh._indices._count > 0) {
 				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
-				cmd.draw(mesh._vertices._count, 1, 0, 0);
+				cmd.bindIndexBuffer(mesh._indices._buffer, 0, mesh._indices.get_type());
+				cmd.drawIndexed(mesh._indices._count, 1, 0, 0, 0);
 			}
 			else {
 				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
-				cmd.bindIndexBuffer(mesh._indices._buffer, 0, mesh._indices.get_type());
-				cmd.drawIndexed(mesh._indices._count, 1, 0, 0, 0);
+				cmd.draw(mesh._vertices._count, 1, 0, 0);
 			}
 			// draw end //
 			cmd.endRendering();

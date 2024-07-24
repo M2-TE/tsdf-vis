@@ -10,7 +10,7 @@
 #include "core/renderer.hpp"
 #include "core/imgui.hpp"
 #include "core/input.hpp"
-#include "components/grid.hpp"
+#include "components/scene.hpp"
 
 class Engine {
 public:
@@ -86,14 +86,15 @@ public:
         _running = true;
         _rendering = true;
         
-        // some final shenanigans
-        _grid.init(_vmalloc, _queues._family_universal);
+        // begin constructing scenes
+        _scene.init(_vmalloc, _queues._family_universal);
     }
     void destroy() {
         _device.waitIdle();
+        // destroy scenes
+        _scene.destroy(_vmalloc);
         //
         ImGui::impl::shutdown(_device);
-        _grid.destroy(_vmalloc);
         _camera.destroy(_vmalloc);
         _renderer.destroy(_device, _vmalloc);
         _swapchain.destroy(_device);
@@ -128,7 +129,7 @@ public:
 
         handle_inputs();
         _camera.update(_vmalloc);
-        _renderer.render(_device, _swapchain, _queues, _grid);
+        _renderer.render(_device, _swapchain, _queues, _scene);
         Input::flush();
     }
     
@@ -139,7 +140,7 @@ private:
         
         fmt::println("renderer rebuild triggered");
         _camera.resize(_window.size());
-        _renderer.resize(_device, _vmalloc, _queues, _window.size(), _camera, _grid);
+        _renderer.resize(_device, _vmalloc, _queues, _window.size(), _camera);
         _swapchain.resize(_phys_device, _device, _window, _queues);
     }
     void handle_inputs() {
@@ -165,5 +166,5 @@ private:
     Swapchain _swapchain;
     Renderer _renderer;
     Camera _camera;
-    Grid _grid;
+    Scene _scene;
 };
