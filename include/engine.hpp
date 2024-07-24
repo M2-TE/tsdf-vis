@@ -86,7 +86,8 @@ public:
         _running = true;
         _rendering = true;
         
-        gridtests();
+        // some final shenanigans
+        _grid.init(_vmalloc, _queues._family_universal);
     }
     void destroy() {
         _device.waitIdle();
@@ -132,9 +133,6 @@ public:
     }
     
 private:
-    void gridtests() {
-        _grid.init(_vmalloc, _queues._family_universal);
-    }
     void resize() {
         _device.waitIdle();
         SDL_SyncWindow(_window._p_window);

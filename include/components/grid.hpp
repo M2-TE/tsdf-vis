@@ -13,7 +13,7 @@
 #include "components/indices.hpp"
 
 struct Grid {
-    void init(vma::Allocator vmalloc, uint32_t i_queue) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
 		std::ifstream file;
 		std::string filepath = "../sphere.grid";
 		file.open(filepath, std::ifstream::binary);
@@ -41,7 +41,7 @@ struct Grid {
                 scan_point.y *= -1.0;
                 scan_points.push_back(scan_point);
             }
-			_scan_points.init(vmalloc, i_queue, scan_points);
+			_scan_points.init(vmalloc, queues, scan_points);
 
 			// alloc and read query points
 			std::vector<QueryPoint> query_points;
@@ -78,7 +78,7 @@ struct Grid {
                 cell_indices.push_back(cell[5]);
                 cell_indices.push_back(std::numeric_limits<Index>().max()); // restart strip
             }
-			_query_points.init(vmalloc, i_queue, query_points, cell_indices);
+			_query_points.init(vmalloc, queues, query_points, cell_indices);
 
             file.close();
         }

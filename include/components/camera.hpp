@@ -11,14 +11,14 @@ struct Camera {
 	struct BufferData {
 		glm::mat4x4 matrix;
 	};
-    void init(vma::Allocator vmalloc, uint32_t i_queue, vk::Extent2D extent) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, vk::Extent2D extent) {
         // create camera matrix buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = sizeof(BufferData),	
 			.usage = vk::BufferUsageFlagBits::eUniformBuffer,
 			.sharingMode = vk::SharingMode::eExclusive,
-			.queueFamilyIndexCount = 1,
-			.pQueueFamilyIndices = &i_queue,
+			.queueFamilyIndexCount = queues.size(),
+			.pQueueFamilyIndices = queues.data(),
 		};
 		vma::AllocationCreateInfo info_allocation {
 			.flags = 
