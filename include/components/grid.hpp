@@ -14,7 +14,7 @@
 struct Grid {
     void init(vma::Allocator vmalloc, uint32_t i_queue) {
 		std::ifstream file;
-		std::string filepath = "../hsfd.grid";
+		std::string filepath = "../sphere.grid";
 		file.open(filepath, std::ifstream::binary);
         if (file.good()) {
             float voxelsize = 0;
@@ -36,6 +36,8 @@ struct Grid {
             for (std::size_t i = 0; i < n_scan_points; i++) {
                 glm::vec3 scan_point;
 				file.read(reinterpret_cast<char*>(&scan_point), sizeof(glm::vec3));
+                std::swap(scan_point.y, scan_point.z);
+                scan_point.y *= -1.0;
                 scan_points.push_back(scan_point);
             }
 			_scan_points.init(vmalloc, i_queue, scan_points);
@@ -48,6 +50,8 @@ struct Grid {
 				float signed_distance;
 				file.read(reinterpret_cast<char*>(&position), sizeof(glm::vec3));
 				file.read(reinterpret_cast<char*>(&signed_distance), sizeof(float));
+                std::swap(position.y, position.z);
+                position.y *= -1.0;
                 query_points.emplace_back(position, signed_distance * (1.0f / voxelsize));
             }
 			_query_points.init(vmalloc, i_queue, query_points);

@@ -9,6 +9,7 @@ void main() {
     float interpolater = in_signed_distance * 0.5 + 0.5;
 
     float intensity = 1.0 - abs(in_signed_distance);
+    intensity = 1.0;
 
     out_color = vec4(mix(col_negative, col_positive, interpolater), intensity);
     // out_color = vec4(0.0, 0.0, 1.0, 1.0);

@@ -1,6 +1,5 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_to_string.hpp>
 //
 #include "core/window.hpp"
 #include "core/queues.hpp"
@@ -45,18 +44,10 @@ class Swapchain {
 public:
     void init(vk::PhysicalDevice phys_device, vk::Device device, Window& window, Queues& queues) {
         // query swapchain properties
-        if (!phys_device.getSurfaceSupportKHR(queues._family_universal, window._surface)) {
-            fmt::println("Device lacks surface support. Likely a driver issue, check vulkaninfo");
-            exit(0);
-        }
         vk::SurfaceCapabilitiesKHR capabilities = phys_device.getSurfaceCapabilitiesKHR(window._surface);
         std::vector<vk::SurfaceFormatKHR> formats = phys_device.getSurfaceFormatsKHR(window._surface);
         _extent = window.size();
         _presentation_queue = queues._universal;
-        
-        for (auto& format: formats) {
-            fmt::println("{} {}", vk::to_string(format.colorSpace), vk::to_string(format.format));
-        }
         
         // pick color space and format
         vk::ColorSpaceKHR color_space = formats.front().colorSpace;
@@ -79,7 +70,7 @@ public:
         // create swapchain
         vk::SwapchainCreateInfoKHR info_swapchain {
             .surface = window._surface,
-            .minImageCount = std::min(capabilities.minImageCount + 1, capabilities.maxImageCount),
+            .minImageCount = capabilities.minImageCount + 1,
             .imageFormat = _format,
             .imageColorSpace = color_space,
             .imageExtent = window.size(),

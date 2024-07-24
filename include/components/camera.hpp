@@ -53,7 +53,7 @@ struct Camera {
     }
 	void update(vma::Allocator vmalloc) {
 		// read input for movement and rotation
-		float speed = 0.005;
+		float speed = 0.1;
 		if (Keys::down(SDLK_LCTRL)) speed *= 0.25;
 		if (Keys::down(SDLK_LSHIFT)) speed *= 4.0;
 

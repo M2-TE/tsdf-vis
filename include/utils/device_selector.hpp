@@ -26,7 +26,6 @@ struct DeviceSelector {
         fmt::println("Available devices:");
         for (vk::PhysicalDevice device: phys_devices) {
             auto props = device.getProperties();
-            fmt::print("\t");
 
             // check vulkan api version
             bool passed_version = check_api_ver(props);
@@ -61,18 +60,17 @@ struct DeviceSelector {
         // sort devices by favouring discrete gpus and large local memory heaps
         typedef std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize> DeviceEntry;
         auto fnc_sorter = [](DeviceEntry& a, DeviceEntry& b) {
-            // favor a if it is a discrete GPU and b is not
-            if (std::get<1>(a) && !std::get<1>(b)) return true;
-            // compare total local memory heap size
-            if (std::get<2>(a) > std::get<2>(b)) return true;
-            return false;
+            // favor gpu if a is discrete and b is not
+            if (std::get<1>(a) < std::get<1>(b)) return false;
+            // else compare total local memory of all heaps
+            else return std::get<2>(a) > std::get<2>(b);
         };
         std::sort(matching_devices.begin(), matching_devices.end(), fnc_sorter);
         vk::PhysicalDevice phys_device = std::get<0>(matching_devices.front());
         fmt::println("Picked device: {}", (const char*)phys_device.getProperties().deviceName);
         return phys_device;
     }
-    auto create_logical_device(vk::PhysicalDevice physical_device, Queues& queues) -> std::pair<vk::Device, std::vector<uint32_t>> {
+    auto create_logical_device(vk::PhysicalDevice physical_device) -> std::pair<vk::Device, std::vector<uint32_t>> {
 
         // set up chain of requested device features
         vk::PhysicalDeviceFeatures2 required_features {
