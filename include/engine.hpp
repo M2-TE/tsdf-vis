@@ -51,11 +51,9 @@ public:
         };
         _phys_device = device_selector.select_physical_device(_instance, _window._surface);
 
-
         // Vulkan: create device
         std::vector<uint32_t> queue_mappings;
         std::tie(_device, queue_mappings) = device_selector.create_logical_device(_phys_device);
-        _queues.init(_device, queue_mappings);
         
         // Vulkan: dynamic dispatcher init 3/3
         VULKAN_HPP_DEFAULT_DISPATCHER.init(_device);
@@ -77,6 +75,7 @@ public:
         _vmalloc = vma::createAllocator(info_vmalloc);
         
         // create renderer components
+        _queues.init(_device, queue_mappings);
         _camera.init(_vmalloc, _queues._family_universal, _window.size());
         _swapchain._resize_requested = true;
         

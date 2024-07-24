@@ -150,18 +150,6 @@ private:
         _dst_image.transition_layout(info_transition);      
         _pipe_scan_points.execute(cmd, _dst_image, grid._scan_points, true);
         
-        // // draw query points
-        // info_transition = {
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
-        //     .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        //     .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
-        // };
-        // _dst_image.transition_layout(info_transition);
-        // _pipe_query_points.execute(cmd, _dst_image, grid._query_points, false);
-        
         // draw cells
         info_transition = {
             .cmd = cmd,
@@ -172,7 +160,7 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
         _dst_image.transition_layout(info_transition);
-        _pipe_cells.execute(cmd, _dst_image, grid._query_points, grid._cells, false);
+        _pipe_cells.execute(cmd, _dst_image, grid._query_points, false);
     }
     
 private:

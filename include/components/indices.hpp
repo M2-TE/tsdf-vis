@@ -8,7 +8,7 @@
 
 template<typename Index>
 struct Indices {
-    void init(vma::Allocator vmalloc, uint32_t i_queue, std::vector<Index>& index_data) {
+    void init(vma::Allocator vmalloc, uint32_t i_queue, std::span<Index> index_data) {
         // create index buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = sizeof(Index) * index_data.size(),	
@@ -49,14 +49,14 @@ struct Indices {
     void destroy(vma::Allocator vmalloc) {
 		vmalloc.destroyBuffer(_buffer, _allocation);
     }
-	auto static constexpr get_type() noexcept -> vk::IndexType {
+	auto get_type() -> vk::IndexType {
 		if constexpr (sizeof(Index) == 4) return vk::IndexType::eUint32;
 		else if constexpr (sizeof(Index) == 2) return vk::IndexType::eUint16;
 		else return vk::IndexType::eNoneKHR;
 	}
 
     // cpu
-    uint32_t _count; // index count
+    uint32_t _count = 0; // index count
 	bool _require_staging;
 	bool _require_flushing;
     // gpu

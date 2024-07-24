@@ -8,6 +8,7 @@
 #include <fmt/core.h>
 #include <glm/glm.hpp>
 //
+#include "components/mesh.hpp"
 #include "components/vertices.hpp"
 #include "components/indices.hpp"
 
@@ -43,7 +44,7 @@ struct Grid {
 			_scan_points.init(vmalloc, i_queue, scan_points);
 
 			// alloc and read query points
-			std::vector<std::pair<glm::vec3, float>> query_points;
+			std::vector<QueryPoint> query_points;
             query_points.reserve(n_query_points);
             for (std::size_t i = 0; i < n_query_points; i++) {
                 glm::vec3 position;
@@ -54,13 +55,11 @@ struct Grid {
                 position.y *= -1.0;
                 query_points.emplace_back(position, signed_distance * (1.0f / voxelsize));
             }
-			_query_points.init(vmalloc, i_queue, query_points);
-
             // alloc and read cells (indexing into query points)
-            std::vector<uint32_t> cell_indices;
+            std::vector<Index> cell_indices;
             cell_indices.reserve(n_cells * 8); // TODO: multiply with indices per cell
             for (std::size_t i = 0; i < n_cells; i++) {
-                std::array<uint32_t, 8> cell;
+                std::array<Index, 8> cell;
 				file.read(reinterpret_cast<char*>(cell.data()), sizeof(cell));
                 // build cell edge via line strip indices
                 // front side
@@ -69,7 +68,7 @@ struct Grid {
                 // back side
                 cell_indices.insert(cell_indices.end(), cell.cbegin() + 4, cell.cbegin() + 8);
                 cell_indices.push_back(cell[4]);
-                cell_indices.push_back(std::numeric_limits<uint32_t>().max()); // restart strip
+                cell_indices.push_back(std::numeric_limits<Index>().max()); // restart strip
                 // missing edges
                 cell_indices.push_back(cell[3]);
                 cell_indices.push_back(cell[7]);
@@ -77,9 +76,9 @@ struct Grid {
                 cell_indices.push_back(cell[2]);
                 cell_indices.push_back(cell[1]);
                 cell_indices.push_back(cell[5]);
-                cell_indices.push_back(std::numeric_limits<uint32_t>().max()); // restart strip
+                cell_indices.push_back(std::numeric_limits<Index>().max()); // restart strip
             }
-			_cells.init(vmalloc, i_queue, cell_indices);
+			_query_points.init(vmalloc, i_queue, query_points, cell_indices);
 
             file.close();
         }
@@ -91,11 +90,12 @@ struct Grid {
     void destroy(vma::Allocator vmalloc) {
 		_scan_points.destroy(vmalloc);
 		_query_points.destroy(vmalloc);
-		_cells.destroy(vmalloc);
     }
     
 public:
-    Vertices<glm::vec3> _scan_points;
-    Vertices<std::pair<glm::vec3, float>> _query_points;
-    Indices<uint32_t> _cells;
+    typedef uint32_t Index;
+    typedef glm::vec3 ScanPoint;
+    typedef std::pair<glm::vec3, float> QueryPoint;
+    Mesh<ScanPoint> _scan_points; // loose points
+    Mesh<QueryPoint, Index> _query_points; // indexed line list
 };

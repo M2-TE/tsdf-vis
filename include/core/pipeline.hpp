@@ -4,9 +4,9 @@
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
 //
-#include "components/grid.hpp"
+#include "components/mesh.hpp"
 #include "components/image.hpp"
-#include "components/vertices.hpp"
+#include "components/grid.hpp"
 
 namespace Pipeline
 {
@@ -236,8 +236,8 @@ namespace Pipeline
 			_pipeline = pipeline;
 			_render_area = vk::Rect2D({ 0,0 }, extent);
 		}
-		template<typename VertexType>
-		void execute(vk::CommandBuffer cmd, Image& dst_image, Vertices<VertexType>& vertices, bool clear) {
+		template<typename Vertex, typename Index>
+		void execute(vk::CommandBuffer cmd, Image& dst_image, Mesh<Vertex, Index>& mesh, bool clear) {
 			// vk::RenderingAttachmentInfo info_depth_attach {
 			// 	// .imageView = nullptr,
 			// 	.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
@@ -268,38 +268,15 @@ namespace Pipeline
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
 			}
 			// draw beg //
-			cmd.bindVertexBuffers(0, vertices._buffer, { 0 });
-			cmd.draw(vertices._count, 1, 0, 0);
-			// draw end //
-			cmd.endRendering();
-		}
-		template<typename VertexType, typename IndexType>
-		void execute(vk::CommandBuffer cmd, Image& dst_image, Vertices<VertexType>& vertices, Indices<IndexType>& indices, bool clear) {
-			vk::RenderingAttachmentInfo info_color_attach {
-				.imageView = dst_image._view,
-				.imageLayout = dst_image._last_layout,
-				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
-				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
-			};
-			vk::RenderingInfo info_render {
-				.renderArea = _render_area,
-				.layerCount = 1,
-				.colorAttachmentCount = 1,
-				.pColorAttachments = &info_color_attach,
-				.pDepthAttachment = nullptr,
-				.pStencilAttachment = nullptr,
-			};
-			cmd.beginRendering(info_render);
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
-			if (_desc_sets.size() > 0) {
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
+			if (mesh._indices._count > 0) {
+				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
+				cmd.draw(mesh._vertices._count, 1, 0, 0);
 			}
-			// draw beg //
-			cmd.bindVertexBuffers(0, vertices._buffer, { 0 });
-			cmd.bindIndexBuffer(indices._buffer, 0, indices.get_type());
-			cmd.drawIndexed(indices._count, 1, 0, 0, 0);
+			else {
+				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
+				cmd.bindIndexBuffer(mesh._indices._buffer, 0, mesh._indices.get_type());
+				cmd.drawIndexed(mesh._indices._count, 1, 0, 0, 0);
+			}
 			// draw end //
 			cmd.endRendering();
 		}

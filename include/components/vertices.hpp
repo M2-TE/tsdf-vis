@@ -6,7 +6,7 @@
 
 template<typename Vertex>
 struct Vertices {
-    void init(vma::Allocator vmalloc, uint32_t i_queue, std::vector<Vertex>& vertex_data) {
+    void init(vma::Allocator vmalloc, uint32_t i_queue, std::span<Vertex> vertex_data) {
         // create vertex buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = sizeof(Vertex) * vertex_data.size(),	
