@@ -8,10 +8,7 @@
 #include "core/queues.hpp"
 
 struct DeviceSelector {
-    auto select_physical_device(vk::Instance instance) -> vk::PhysicalDevice {
-        // bool: is_discrete, vk::DeviceSize: memory_size
-        std::vector<std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize>> matching_devices;
-
+    auto select_physical_device(vk::Instance instance, vk::SurfaceKHR surface = nullptr) -> vk::PhysicalDevice {
         // enumerate devices
         auto phys_devices = instance.enumeratePhysicalDevices();
         if (phys_devices.size() == 0) fmt::println("No device with vulkan support found");
@@ -22,28 +19,31 @@ struct DeviceSelector {
             _required_extensions.cend()
         };
         
-        // check for matching devices
+        // check for matching devices (bool = is_discrete, vk::DeviceSize = memory_size)
+        std::vector<std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize>> matching_devices;
         fmt::println("Available devices:");
         for (vk::PhysicalDevice device: phys_devices) {
             auto props = device.getProperties();
+            bool passed = true;
 
             // check vulkan api version
-            bool passed_version = check_api_ver(props);
+            passed &= check_api_ver(props);
             // check requested extensions
-            bool passed_extensions = check_extensions(required_extensions, device);
+            passed &= check_extensions(required_extensions, device);
             // retrieve available core features
             auto feature_chain = device.getFeatures2<
                 vk::PhysicalDeviceFeatures2,
                 vk::PhysicalDeviceVulkan11Features,
                 vk::PhysicalDeviceVulkan12Features,
                 vk::PhysicalDeviceVulkan13Features>();
-            bool passed_features = true;
-            passed_features &= check_features(feature_chain.get<vk::PhysicalDeviceFeatures2>().features);
-            passed_features &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan11Features>());
-            passed_features &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan12Features>());
-            passed_features &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan13Features>());
-            // check if all tests were passed
-            if (passed_version && passed_extensions && passed_features) {
+            passed &= check_features(feature_chain.get<vk::PhysicalDeviceFeatures2>().features);
+            passed &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan11Features>());
+            passed &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan12Features>());
+            passed &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan13Features>());
+            passed &= check_presentation(device, surface);
+
+            // add device candidate if it passed tests
+            if (passed) {
                 bool is_discrete = props.deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
                 vk::DeviceSize memory_size = 0;
                 auto memory_props = device.getMemoryProperties();
@@ -57,6 +57,13 @@ struct DeviceSelector {
             const char* dev_name = props.deviceName;
             fmt::println("-> {}", dev_name);
         }
+
+        // optionally bail out
+        if (matching_devices.size() == 0) {
+            fmt::println("None of the devices match the requirements");
+            exit(0);
+        }
+
         // sort devices by favouring discrete gpus and large local memory heaps
         typedef std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize> DeviceEntry;
         auto fnc_sorter = [](DeviceEntry& a, DeviceEntry& b) {
@@ -71,7 +78,6 @@ struct DeviceSelector {
         return phys_device;
     }
     auto create_logical_device(vk::PhysicalDevice physical_device) -> std::pair<vk::Device, std::vector<uint32_t>> {
-
         // set up chain of requested device features
         vk::PhysicalDeviceFeatures2 required_features {
             .pNext = &_required_vk11_features,
@@ -103,9 +109,9 @@ private:
         else                fmt::print("[!api] ");
         return passed_version;
     }
-    bool check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice device) {
+    bool check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice physical_device) {
         size_t n_matches = 0;
-        auto ext_props = device.enumerateDeviceExtensionProperties();
+        auto ext_props = physical_device.enumerateDeviceExtensionProperties();
         for (auto& extension: ext_props) {
             std::string ext_name = extension.extensionName;
             if (required_extensions.contains(ext_name)) n_matches++;
@@ -172,6 +178,23 @@ private:
         if (passed_features) fmt::print("[feat13] ");
         else                 fmt::print("[!feat13] ");
         return passed_features;
+    }
+    bool check_presentation(vk::PhysicalDevice physical_device, vk::SurfaceKHR surface) {
+        // check if presentation capabilties are required
+        if (surface == nullptr) return true;
+
+        // create dummy queues to check presentation capabilities
+        auto [queue_infos, _] = create_queue_infos(physical_device);
+        bool passed = false;
+        // check each queue family for presentation capabilities
+        for (auto& info: queue_infos) {
+            vk::Bool32 b = physical_device.getSurfaceSupportKHR(info.queueFamilyIndex, surface);
+            passed |= b;
+        }
+
+        if (passed) fmt::print("[present] ");
+        else        fmt::print("[!present] ");
+        return passed;
     }
     auto create_queue_infos(vk::PhysicalDevice physical_device) -> std::pair<std::vector<vk::DeviceQueueCreateInfo>, std::vector<uint32_t>> {
         auto queue_families = physical_device.getQueueFamilyProperties();

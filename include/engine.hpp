@@ -49,7 +49,7 @@ public:
                 vk::QueueFlagBits::eTransfer,
             }
         };
-        _phys_device = device_selector.select_physical_device(_instance);
+        _phys_device = device_selector.select_physical_device(_instance, _window._surface);
 
 
         // Vulkan: create device
