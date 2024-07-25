@@ -58,7 +58,7 @@ namespace Pipeline
 		auto reflect(vk::Device device, std::span<std::string> shaderPaths)
             -> std::pair<vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>;
 		auto compile(vk::Device device, std::string& path)
-            -> vk::UniqueShaderModule;
+            -> vk::ShaderModule;
 
 	protected:
 		vk::Pipeline _pipeline;
@@ -81,10 +81,10 @@ namespace Pipeline
 			_pipeline_layout = device.createPipelineLayout(info_layout);
 
 			// create pipeline
-			vk::UniqueShaderModule cs_module = compile(device, cs_path);
+			vk::ShaderModule cs_module = compile(device, cs_path);
 			vk::PipelineShaderStageCreateInfo info_shader_stage {
 				.stage = vk::ShaderStageFlagBits::eCompute,
-				.module = cs_module.get(),
+				.module = cs_module,
 				.pName = "main",
 			};
 			vk::ComputePipelineCreateInfo info_compute_pipe {
@@ -94,6 +94,8 @@ namespace Pipeline
 			auto [result, pipeline] = device.createComputePipeline(nullptr, info_compute_pipe);
 			if (result != vk::Result::eSuccess) fmt::println("error creating compute pipeline");
 			_pipeline = pipeline;
+			// clean up shader module
+			device.destroyShaderModule(cs_module);
 		}
 		void execute(vk::CommandBuffer cmd, uint32_t x, uint32_t y, uint32_t z) {
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, _pipeline);
@@ -122,17 +124,17 @@ namespace Pipeline
 			_pipeline_layout = device.createPipelineLayout(layoutInfo);
 
 			// create shader stages
-			vk::UniqueShaderModule vs_module = compile(device, vs_path);
-			vk::UniqueShaderModule fs_module = compile(device, fs_path);
+			vk::ShaderModule vs_module = compile(device, vs_path);
+			vk::ShaderModule fs_module = compile(device, fs_path);
 			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages {{
 				{
 					.stage = vk::ShaderStageFlagBits::eVertex,
-					.module = vs_module.get(),
+					.module = vs_module,
 					.pName = "main",
 				},
 				{
 					.stage = vk::ShaderStageFlagBits::eFragment,
-					.module = fs_module.get(),
+					.module = fs_module,
 					.pName = "main",
 				}
 			}};
@@ -218,7 +220,8 @@ namespace Pipeline
 			};
 			vk::GraphicsPipelineCreateInfo pipeInfo {
 				.pNext = &renderInfo,
-				.stageCount = shader_stages.size(), .pStages = shader_stages.data(),
+				.stageCount = shader_stages.size(), 
+				.pStages = shader_stages.data(),
 				.pVertexInputState = &info_vertex_input,
 				.pInputAssemblyState = &info_input_assembly,
 				.pTessellationState = nullptr,
@@ -234,6 +237,9 @@ namespace Pipeline
 			if (result != vk::Result::eSuccess) fmt::println("error creating graphics pipeline");
 			_pipeline = pipeline;
 			_render_area = vk::Rect2D({ 0,0 }, extent);
+			// clean up shader modules
+			device.destroyShaderModule(vs_module);
+			device.destroyShaderModule(fs_module);
 		}
 		template<typename Vertex, typename Index>
 		void execute(vk::CommandBuffer cmd, Image& dst_image, Mesh<Vertex, Index>& mesh, bool clear) {

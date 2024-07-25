@@ -5,8 +5,8 @@
 #include <spirv_reflect.h>
 #include <cmrc/cmrc.hpp>
 #include <fmt/base.h>
-#undef VULKAN_HPP_NO_TO_STRING
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_to_string.hpp>
 //
 #include "core/pipeline.hpp"
 CMRC_DECLARE(shaders);
@@ -409,7 +409,7 @@ auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
 	return refl_desc_sets;
 }
 auto Pipeline::Base::compile(vk::Device device, std::string& path)
-    -> vk::UniqueShaderModule
+    -> vk::ShaderModule
 {
 	cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
 	if (!fs.exists(path)) {
@@ -421,7 +421,7 @@ auto Pipeline::Base::compile(vk::Device device, std::string& path)
         .codeSize = file.size(),
         .pCode = reinterpret_cast<const uint32_t*>(file.cbegin()),
     };
-	return device.createShaderModuleUnique(info_shader);
+	return device.createShaderModule(info_shader);
 }
 auto Pipeline::Base::reflect(vk::Device device, std::span<std::string> shaderPaths) 
     -> std::pair< vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>
@@ -512,24 +512,27 @@ auto Pipeline::Base::reflect(vk::Device device, std::span<std::string> shaderPat
         for (uint32_t i = 0; i < set->binding_count; i++) {
 
 			// check if binding is unique
-			SpvReflectDescriptorBinding* pBinding = set->bindings[i];
-			auto [iter, bUnique] = unique_bindings.emplace(pBinding->set, pBinding->binding);
-			if (!bUnique) continue;
+			SpvReflectDescriptorBinding* p_binding = set->bindings[i];
+			auto [_, unique] = unique_bindings.emplace(p_binding->set, p_binding->binding);
+			if (!unique) continue;
 
             // tally descriptor types for descriptor pool
-            auto [iNode, bEmplaced] = binding_tally.emplace((vk::DescriptorType)pBinding->descriptor_type, 1);
-            if (!bEmplaced) iNode->second++;
+            auto [it_node, emplaced] = binding_tally.emplace((vk::DescriptorType)p_binding->descriptor_type, 1);
+            if (!emplaced) it_node->second++;
 
             // // reflect binding
             // fmt::println("\tset {} | binding {}: {} {}", 
-            //    pBinding->set,
-            //    pBinding->binding,
-            //    vk::to_string((vk::DescriptorType)pBinding->descriptor_type), 
-            //    pBinding->name);
-            bindings.emplace_back().setBinding(pBinding->binding)
-                .setDescriptorCount(pBinding->count)
-                .setStageFlags(stage_flags) // todo: combine stages flags if its present in both
-                .setDescriptorType((vk::DescriptorType)pBinding->descriptor_type);
+            //    p_binding->set,
+            //    p_binding->binding,
+            //    vk::to_string((vk::DescriptorType)p_binding->descriptor_type), 
+            //    p_binding->name);
+            vk::DescriptorSetLayoutBinding binding {
+                .binding = p_binding->binding,
+                .descriptorType = (vk::DescriptorType)p_binding->descriptor_type,
+                .descriptorCount = p_binding->count,
+                .stageFlags = stage_flags, // todo: combine stages flags if its present in both
+            };
+            bindings.push_back(binding);
         }
 
         // create set layout from all bindings
