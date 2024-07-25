@@ -13,10 +13,9 @@
 #include "components/indices.hpp"
 
 struct Grid {
-    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path) {
 		std::ifstream file;
-		std::string filepath = "../sphere.grid";
-		file.open(filepath, std::ifstream::binary);
+		file.open(path.data(), std::ifstream::binary);
         if (file.good()) {
             float voxelsize = 0;
             std::size_t n_scan_points = 0;
@@ -83,7 +82,7 @@ struct Grid {
             file.close();
         }
         else {
-            fmt::println("unable to read grid: {}", filepath);
+            fmt::println("unable to read grid: {}", path.data());
             return;
         }
     }

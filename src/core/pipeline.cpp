@@ -26,33 +26,37 @@ auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
 	if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
 	return refl_desc_sets;
 }
-auto Pipeline::Base::compile(vk::Device device, std::string& path)
+auto Pipeline::Base::compile(vk::Device device, std::string_view path)
     -> vk::ShaderModule
 {
+	std::string str_path { path };
+	str_path.append(".spv");
 	cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
-	if (!fs.exists(path)) {
-		fmt::println("could not find shader: {}", path);
+	if (!fs.exists(str_path)) {
+		fmt::println("could not find shader: {}", str_path);
 		exit(-1);
 	}
-	cmrc::file file = fs.open(path);
+	cmrc::file file = fs.open(str_path);
     vk::ShaderModuleCreateInfo info_shader {
         .codeSize = file.size(),
         .pCode = reinterpret_cast<const uint32_t*>(file.cbegin()),
     };
 	return device.createShaderModule(info_shader);
 }
-auto Pipeline::Base::reflect(vk::Device device, std::span<std::string> shaderPaths) 
+auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shaderPaths) 
     -> std::pair< vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>
 {
 	// read raw shader sources
 	std::vector<std::pair<size_t, const uint32_t*>> shaders;
-	for (auto& path : shaderPaths) {
+	for (std::string_view path: shaderPaths) {
+		std::string str_path { path };
+		str_path.append(".spv");
 		cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
-		if (!fs.exists(path)) {
-			fmt::println("could not find shader: {}", path);
+		if (!fs.exists(str_path)) {
+			fmt::println("could not find shader: {}", str_path);
 			exit(-1);
 		}
-		cmrc::file file = fs.open(path);
+		cmrc::file file = fs.open(str_path);
 		shaders.emplace_back(file.size(), reinterpret_cast<const uint32_t*>(file.cbegin()));
 	}
 

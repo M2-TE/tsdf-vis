@@ -1,5 +1,5 @@
 #pragma once
-#include <span>
+#include <string_view>
 //
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
@@ -55,9 +55,9 @@ namespace Pipeline
 		}
         
 	protected:
-		auto reflect(vk::Device device, std::span<std::string> shaderPaths)
+		auto reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shaderPaths)
             -> std::pair<vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>;
-		auto compile(vk::Device device, std::string& path)
+		auto compile(vk::Device device, std::string_view path)
             -> vk::ShaderModule;
 
 	protected:
@@ -68,10 +68,9 @@ namespace Pipeline
 		std::vector<vk::DescriptorSetLayout> _desc_set_layouts;
     };
 	struct Compute: Base {
-		void init(vk::Device device, std::string cs_path) {
+		void init(vk::Device device, std::string_view cs_path) {
 			// reflect shader contents
-			std::array<std::string, 1> paths = { cs_path.append(".spv") };
-			reflect(device, paths);
+			reflect(device, cs_path);
 
 			// create pipeline layout
 			vk::PipelineLayoutCreateInfo info_layout {
@@ -104,10 +103,9 @@ namespace Pipeline
 		}
 	};
 	struct Graphics: Base {
-		void init(vk::Device device, vk::Extent2D extent, std::string vs_path, std::string fs_path, vk::PolygonMode mode, bool enable_blending) {
+		void init(vk::Device device, vk::Extent2D extent, std::string_view vs_path, std::string_view fs_path, vk::PolygonMode mode, bool enable_blending) {
 			// reflect shader contents
-			std::array<std::string, 2> paths = { vs_path.append(".spv"), fs_path.append(".spv") };
-			auto [bind_desc, attr_descs] = reflect(device, paths);
+			auto [bind_desc, attr_descs] = reflect(device, { vs_path, fs_path });
 
 			// create pipeline layout
 			vk::PushConstantRange pcr {
