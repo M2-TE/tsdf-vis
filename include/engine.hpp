@@ -28,7 +28,8 @@ public:
         DeviceSelector device_selector {
             ._required_major = 1,
             ._required_minor = 3,
-            ._required_extensions = {
+            ._preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu,
+            ._required_extensions {
                 vk::KHRSwapchainExtensionName,
             },
             ._required_features {

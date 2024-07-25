@@ -17,7 +17,7 @@ struct DeviceSelector {
             _required_extensions.cend()
         };
         
-        // check for matching devices (bool = is_discrete, vk::DeviceSize = memory_size)
+        // check for matching devices (bool = is_preferred, vk::DeviceSize = memory_size)
         std::vector<std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize>> matching_devices;
         fmt::println("Available devices:");
         for (vk::PhysicalDevice device: phys_devices) {
@@ -42,7 +42,7 @@ struct DeviceSelector {
 
             // add device candidate if it passed tests
             if (passed) {
-                bool is_discrete = props.deviceType == vk::PhysicalDeviceType::eDiscreteGpu;
+                bool is_preferred = props.deviceType == _preferred_device_type;
                 vk::DeviceSize memory_size = 0;
                 auto memory_props = device.getMemoryProperties();
                 for (auto& heap: memory_props.memoryHeaps) {
@@ -50,7 +50,7 @@ struct DeviceSelector {
                         memory_size += heap.size;
                     }
                 }
-                matching_devices.emplace_back(device, is_discrete, memory_size);
+                matching_devices.emplace_back(device, is_preferred, memory_size);
             }
             const char* dev_name = props.deviceName;
             fmt::println("-> {}", dev_name);
@@ -62,10 +62,10 @@ struct DeviceSelector {
             exit(0);
         }
 
-        // sort devices by favouring discrete gpus and large local memory heaps
+        // sort devices by favouring certain gpu types and large local memory heaps
         typedef std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize> DeviceEntry;
-        auto fnc_sorter = [](DeviceEntry& a, DeviceEntry& b) {
-            // favor gpu if a is discrete and b is not
+        auto fnc_sorter = [&](DeviceEntry& a, DeviceEntry& b) {
+            // favor gpu if a is a preferred type and b is not
             if (std::get<1>(a) < std::get<1>(b)) return false;
             // else compare total local memory of all heaps
             else return std::get<2>(a) > std::get<2>(b);
@@ -258,8 +258,9 @@ private:
     }
 
 public:
-    uint32_t _required_major;
-    uint32_t _required_minor;
+    uint32_t _required_major = 1;
+    uint32_t _required_minor = 0;
+    vk::PhysicalDeviceType _preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
     std::vector<const char*> _required_extensions;
     vk::PhysicalDeviceFeatures _required_features;
     vk::PhysicalDeviceVulkan11Features _required_vk11_features;
