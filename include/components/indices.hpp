@@ -50,9 +50,7 @@ struct Indices {
 		vmalloc.destroyBuffer(_buffer, _allocation);
     }
 	auto get_type() -> vk::IndexType {
-		if constexpr (sizeof(Index) == 4) return vk::IndexType::eUint32;
-		else if constexpr (sizeof(Index) == 2) return vk::IndexType::eUint16;
-		else return vk::IndexType::eNoneKHR;
+		return vk::IndexTypeValue<Index>::value;
 	}
 
     // cpu
@@ -63,6 +61,3 @@ struct Indices {
     vk::Buffer _buffer;
 	vma::Allocation _allocation;
 };
-
-typedef Indices<uint32_t> Indices32;
-typedef Indices<uint16_t> Indices16;
