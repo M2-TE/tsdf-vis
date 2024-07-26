@@ -185,7 +185,7 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _color.transition_layout(info_transition);
-        _pipe_default.execute(cmd, _color, _depth, scene._ply._mesh, true);
+        _pipe_default.execute(cmd, _color, _depth, scene._ply._mesh, true); // clear both color and depth
 
         // draw triangles
         info_transition = {
