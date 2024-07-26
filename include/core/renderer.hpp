@@ -72,7 +72,7 @@ public:
                 vk::ImageUsageFlagBits::eTransferSrc | 
                 vk::ImageUsageFlagBits::eStorage
         };
-        _dst_image.init(info_image);
+        _color.init(info_image);
 
         // create depth image without stencil
         info_image = {
@@ -82,12 +82,13 @@ public:
             .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
             .aspects = vk::ImageAspectFlagBits::eDepth
         };
-        _depth_image.init(info_image);
+        _depth.init(info_image);
 
         // create graphics pipelines
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
+            .depth_write = true, .depth_test = true,
             .vs_path = "default.vert", .fs_path = "default.frag",
         };
         _pipe_default.init(info_pipeline);
@@ -97,6 +98,7 @@ public:
             .poly_mode = vk::PolygonMode::ePoint,
             .primitive_topology = vk::PrimitiveTopology::ePointList,
             .cull_mode = vk::CullModeFlagBits::eNone,
+            .depth_write = false, .depth_test = true,
             .vs_path = "scan_points.vert", .fs_path = "scan_points.frag",
         };
         _pipe_scan_points.init(info_pipeline);
@@ -107,6 +109,7 @@ public:
             .primitive_restart = true,
             .cull_mode = vk::CullModeFlagBits::eNone,
             .blend_enabled = true,
+            .depth_write = false, .depth_test = true,
             .vs_path = "cells.vert", .fs_path = "cells.frag",
         };
         _pipe_cells.init(info_pipeline);
@@ -118,8 +121,8 @@ public:
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _frames) frame.destroy(device);
-        _dst_image.destroy(device, vmalloc);
-        _depth_image.destroy(device, vmalloc);
+        _color.destroy(device, vmalloc);
+        _depth.destroy(device, vmalloc);
         _pipe_default.destroy(device);
         _pipe_scan_points.destroy(device);
         _pipe_cells.destroy(device);
@@ -166,7 +169,7 @@ public:
         queues._universal.submit(info_submit);
 
         // present drawn image
-        swapchain.present(device, _dst_image, frame._timeline, frame._timeline_val);
+        swapchain.present(device, _color, frame._timeline, frame._timeline_val);
     }
     
 private:
@@ -181,8 +184,8 @@ private:
             .src_access = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
-        _dst_image.transition_layout(info_transition);
-        _pipe_scan_points.execute(cmd, _dst_image, scene._grid._scan_points, true);
+        _color.transition_layout(info_transition);
+        _pipe_default.execute(cmd, _color, _depth, scene._ply._mesh, true);
 
         // draw triangles
         info_transition = {
@@ -193,8 +196,8 @@ private:
             .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
-        _dst_image.transition_layout(info_transition);
-        _pipe_default.execute(cmd, _dst_image, scene._ply._mesh, false);
+        _color.transition_layout(info_transition);
+        _pipe_scan_points.execute(cmd, _color, _depth, scene._grid._scan_points, false);
         
         // draw cells
         info_transition = {
@@ -205,16 +208,16 @@ private:
             .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
-        _dst_image.transition_layout(info_transition);
-        _pipe_cells.execute(cmd, _dst_image, scene._grid._query_points, false);
+        _color.transition_layout(info_transition);
+        _pipe_cells.execute(cmd, _color, _depth, scene._grid._query_points, false);
     }
     
 private:
     std::array<FrameData, 2> _frames; // double buffering
     uint32_t _sync_frame = 0;
     
-    Image _dst_image;
-    Image _depth_image;
+    Image _color;
+    Image _depth;
     Pipeline::Graphics _pipe_default;
     Pipeline::Graphics _pipe_scan_points;
     Pipeline::Graphics _pipe_cells;

@@ -111,7 +111,8 @@ namespace Pipeline
 			vk::Bool32 primitive_restart = false;
 			vk::CullModeFlags cull_mode = vk::CullModeFlagBits::eBack;
 			vk::Bool32 blend_enabled = false;
-			vk::Bool32 depth_enabled = false; // todo: prolly need more specific things
+			vk::Bool32 depth_write = false;
+			vk::Bool32 depth_test = false;
 			std::string_view vs_path;
 			std::string_view fs_path;
 		};
@@ -192,8 +193,8 @@ namespace Pipeline
 				.alphaToOneEnable = false,
 			};
 			vk::PipelineDepthStencilStateCreateInfo info_depth_stencil {
-				.depthTestEnable = false,
-				.depthWriteEnable = false,
+				.depthTestEnable = info.depth_test,
+				.depthWriteEnable = info.depth_write,
 				.depthCompareOp = vk::CompareOp::eLessOrEqual,
 				.depthBoundsTestEnable = false,
 				.stencilTestEnable = false,
@@ -223,7 +224,7 @@ namespace Pipeline
 			vk::PipelineRenderingCreateInfo renderInfo {
 				.colorAttachmentCount = 1,
 				.pColorAttachmentFormats = &outputFormat,
-				.depthAttachmentFormat = vk::Format::eUndefined,
+				.depthAttachmentFormat = vk::Format::eD32Sfloat,
 				.stencilAttachmentFormat = vk::Format::eUndefined,
 			};
 			vk::GraphicsPipelineCreateInfo pipeInfo {
@@ -250,29 +251,29 @@ namespace Pipeline
 			info.device.destroyShaderModule(fs_module);
 		}
 		template<typename Vertex, typename Index>
-		void execute(vk::CommandBuffer cmd, Image& dst_image, Mesh<Vertex, Index>& mesh, bool clear) {
-			// vk::RenderingAttachmentInfo info_depth_attach {
-			// 	// .imageView = nullptr,
-			// 	.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
-			// 	.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-			// 	.loadOp = vk::AttachmentLoadOp::eDontCare,
-			// 	.storeOp = vk::AttachmentStoreOp::eStore,
-			// 	.clearValue = { .depthStencil = 0.0f },
-			// };
+		void execute(vk::CommandBuffer cmd, Image& dst_color, Image& dst_depth, Mesh<Vertex, Index>& mesh, bool clear) {
 			vk::RenderingAttachmentInfo info_color_attach {
-				.imageView = dst_image._view,
-				.imageLayout = dst_image._last_layout,
+				.imageView = dst_color._view,
+				.imageLayout = dst_color._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+			};
+			vk::RenderingAttachmentInfo info_depth_attach {
+				.imageView = dst_depth._view,
+				.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
+				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue = { .depthStencil = 1.0f },
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
 				.layerCount = 1,
 				.colorAttachmentCount = 1,
 				.pColorAttachments = &info_color_attach,
-				.pDepthAttachment = nullptr,
+				.pDepthAttachment = &info_depth_attach,
 				.pStencilAttachment = nullptr,
 			};
 			cmd.beginRendering(info_render);
