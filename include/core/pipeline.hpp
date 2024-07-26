@@ -103,9 +103,21 @@ namespace Pipeline
 		}
 	};
 	struct Graphics: Base {
-		void init(vk::Device device, vk::Extent2D extent, std::string_view vs_path, std::string_view fs_path, vk::PolygonMode mode, bool enable_blending) {
+		struct CreateInfo {
+			vk::Device device;
+			vk::Extent2D extent;
+			vk::PolygonMode poly_mode = vk::PolygonMode::eFill;
+			vk::PrimitiveTopology primitive_topology = vk::PrimitiveTopology::eTriangleList;
+			vk::Bool32 primitive_restart = false;
+			vk::CullModeFlags cull_mode = vk::CullModeFlagBits::eBack;
+			vk::Bool32 blend_enabled = false;
+			vk::Bool32 depth_enabled = false; // todo: prolly need more specific things
+			std::string_view vs_path;
+			std::string_view fs_path;
+		};
+		void init(CreateInfo& info) {
 			// reflect shader contents
-			auto [bind_desc, attr_descs] = reflect(device, { vs_path, fs_path });
+			auto [bind_desc, attr_descs] = reflect(info.device, { info.vs_path, info.fs_path });
 
 			// create pipeline layout
 			vk::PushConstantRange pcr {
@@ -119,11 +131,11 @@ namespace Pipeline
 				.pushConstantRangeCount = 1,
 				.pPushConstantRanges = &pcr,
 			};
-			_pipeline_layout = device.createPipelineLayout(layoutInfo);
+			_pipeline_layout = info.device.createPipelineLayout(layoutInfo);
 
 			// create shader stages
-			vk::ShaderModule vs_module = compile(device, vs_path);
-			vk::ShaderModule fs_module = compile(device, fs_path);
+			vk::ShaderModule vs_module = compile(info.device, info.vs_path);
+			vk::ShaderModule fs_module = compile(info.device, info.fs_path);
 			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages {{
 				{
 					.stage = vk::ShaderStageFlagBits::eVertex,
@@ -148,19 +160,17 @@ namespace Pipeline
 				};
 			}
 			vk::PipelineInputAssemblyStateCreateInfo info_input_assembly {
-				.topology = mode == vk::PolygonMode::ePoint ? vk::PrimitiveTopology::ePointList :
-							mode == vk::PolygonMode::eLine  ? vk::PrimitiveTopology::eLineStrip :
-							vk::PrimitiveTopology::eTriangleList,			
-				.primitiveRestartEnable = mode == vk::PolygonMode::eLine ? true : false,
+				.topology = info.primitive_topology,			
+				.primitiveRestartEnable = info.primitive_restart,
 			};
 			vk::Viewport viewport {
 				.x = 0, .y = 0,
-				.width = (float)extent.width,
-				.height = (float)extent.height,
+				.width = (float)info.extent.width,
+				.height = (float)info.extent.height,
 				.minDepth = 0.0,	
 				.maxDepth = 1.0,
 			};
-			vk::Rect2D scissor({0, 0}, extent);
+			vk::Rect2D scissor({0, 0}, info.extent);
 			vk::PipelineViewportStateCreateInfo info_viewport {
 				.viewportCount = 1,
 				.pViewports = &viewport,
@@ -170,8 +180,8 @@ namespace Pipeline
 			vk::PipelineRasterizationStateCreateInfo info_rasterization {
 				.depthClampEnable = false,
 				.rasterizerDiscardEnable = false,
-				.polygonMode = mode,
-				.cullMode = mode == vk::PolygonMode::eFill ? vk::CullModeFlagBits::eBack : vk::CullModeFlagBits::eNone,
+				.polygonMode = info.poly_mode,
+				.cullMode = info.cull_mode,
 				.frontFace = vk::FrontFace::eClockwise,
 				.depthBiasEnable = false,
 				.lineWidth = 1.0,
@@ -189,7 +199,7 @@ namespace Pipeline
 				.stencilTestEnable = false,
 			};
 			vk::PipelineColorBlendAttachmentState info_blend_attach {
-				.blendEnable = enable_blending,
+				.blendEnable = info.blend_enabled,
 				.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
 				.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
 				.colorBlendOp = vk::BlendOp::eAdd,
@@ -231,13 +241,13 @@ namespace Pipeline
 				.pDynamicState = nullptr,
 				.layout = _pipeline_layout,
 			};
-			auto [result, pipeline] = device.createGraphicsPipeline(nullptr, pipeInfo);
+			auto [result, pipeline] = info.device.createGraphicsPipeline(nullptr, pipeInfo);
 			if (result != vk::Result::eSuccess) fmt::println("error creating graphics pipeline");
 			_pipeline = pipeline;
-			_render_area = vk::Rect2D({ 0,0 }, extent);
+			_render_area = vk::Rect2D({ 0,0 }, info.extent);
 			// clean up shader modules
-			device.destroyShaderModule(vs_module);
-			device.destroyShaderModule(fs_module);
+			info.device.destroyShaderModule(vs_module);
+			info.device.destroyShaderModule(fs_module);
 		}
 		template<typename Vertex, typename Index>
 		void execute(vk::CommandBuffer cmd, Image& dst_image, Mesh<Vertex, Index>& mesh, bool clear) {

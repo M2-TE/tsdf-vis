@@ -63,32 +63,65 @@ public:
         for (auto& frame: _frames) frame.init(device, queues);
         
         // create image with 16 bits color depth
-        vk::ImageUsageFlags usage = 
-            vk::ImageUsageFlagBits::eColorAttachment | 
-            vk::ImageUsageFlagBits::eTransferSrc | 
-            vk::ImageUsageFlagBits::eStorage;
         Image::CreateInfo info_image {
-            .device = device,
-            .vmalloc = vmalloc,
+            .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR16G16B16A16Sfloat,
             .extent { extent.width, extent.height, 1 },
-            .usage = usage
+            .usage = 
+                vk::ImageUsageFlagBits::eColorAttachment | 
+                vk::ImageUsageFlagBits::eTransferSrc | 
+                vk::ImageUsageFlagBits::eStorage
         };
         _dst_image.init(info_image);
 
+        // create depth image without stencil
+        info_image = {
+            .device = device, .vmalloc = vmalloc,
+            .format = vk::Format::eD32Sfloat,
+            .extent { extent.width, extent.height, 1 },
+            .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+            .aspects = vk::ImageAspectFlagBits::eDepth
+        };
+        _depth_image.init(info_image);
+
         // create graphics pipelines
-        _pipe_scan_points.init(device, extent, "scan_points.vert", "scan_points.frag", vk::PolygonMode::ePoint, false);
+        Pipeline::Graphics::CreateInfo info_pipeline {
+            .device = device, .extent = extent,
+            .cull_mode = vk::CullModeFlagBits::eNone,
+            .vs_path = "default.vert", .fs_path = "default.frag",
+        };
+        _pipe_default.init(info_pipeline);
+        // specifically for pointclouds and tsdf cells
+        info_pipeline = {
+            .device = device, .extent = extent,
+            .poly_mode = vk::PolygonMode::ePoint,
+            .primitive_topology = vk::PrimitiveTopology::ePointList,
+            .cull_mode = vk::CullModeFlagBits::eNone,
+            .vs_path = "scan_points.vert", .fs_path = "scan_points.frag",
+        };
+        _pipe_scan_points.init(info_pipeline);
+        info_pipeline = {
+            .device = device, .extent = extent,
+            .poly_mode = vk::PolygonMode::eLine,
+            .primitive_topology = vk::PrimitiveTopology::eLineStrip,
+            .primitive_restart = true,
+            .cull_mode = vk::CullModeFlagBits::eNone,
+            .blend_enabled = true,
+            .vs_path = "cells.vert", .fs_path = "cells.frag",
+        };
+        _pipe_cells.init(info_pipeline);
+
+        // write camera descriptor to pipelines
+        _pipe_default.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        _pipe_query_points.init(device, extent, "query_points.vert", "query_points.frag", vk::PolygonMode::ePoint, false);
-        _pipe_query_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        _pipe_cells.init(device, extent, "cells.vert", "cells.frag", vk::PolygonMode::eLine, true);
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _frames) frame.destroy(device);
         _dst_image.destroy(device, vmalloc);
+        _depth_image.destroy(device, vmalloc);
+        _pipe_default.destroy(device);
         _pipe_scan_points.destroy(device);
-        _pipe_query_points.destroy(device);
         _pipe_cells.destroy(device);
     }
     
@@ -148,8 +181,20 @@ private:
             .src_access = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
-        _dst_image.transition_layout(info_transition);      
+        _dst_image.transition_layout(info_transition);
         _pipe_scan_points.execute(cmd, _dst_image, scene._grid._scan_points, true);
+
+        // draw triangles
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _dst_image.transition_layout(info_transition);
+        _pipe_default.execute(cmd, _dst_image, scene._ply._mesh, false);
         
         // draw cells
         info_transition = {
@@ -169,7 +214,8 @@ private:
     uint32_t _sync_frame = 0;
     
     Image _dst_image;
+    Image _depth_image;
+    Pipeline::Graphics _pipe_default;
     Pipeline::Graphics _pipe_scan_points;
-    Pipeline::Graphics _pipe_query_points;
     Pipeline::Graphics _pipe_cells;
 };

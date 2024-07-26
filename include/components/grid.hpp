@@ -83,7 +83,6 @@ struct Grid {
         }
         else {
             fmt::println("unable to read grid: {}", path.data());
-            return;
         }
     }
     void destroy(vma::Allocator vmalloc) {
