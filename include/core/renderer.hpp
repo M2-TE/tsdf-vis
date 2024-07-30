@@ -12,7 +12,7 @@
 
 class Renderer {
     // move this and swapchain thingy to its own header
-    struct FrameData {
+    struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_pool {
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -57,7 +57,7 @@ class Renderer {
     };
 public:
     void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) {
-        // create FrameData objects
+        // create SyncFrame objects
         for (auto& frame: _sync_frames) frame.init(device, queues);
         
         // create image with 16 bits color depth
@@ -132,7 +132,7 @@ public:
     }
     void render(vk::Device device, Swapchain& swapchain, Queues& queues, Scene& scene) {
         // wait for command buffer execution
-        FrameData& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
+        SyncFrame& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
         vk::SemaphoreWaitInfo info_sema_wait {
             .semaphoreCount = 1,
             .pSemaphores = &frame._timeline,
@@ -211,7 +211,7 @@ private:
     }
     
 private:
-    std::array<FrameData, 2> _sync_frames; // double buffering
+    std::array<SyncFrame, 2> _sync_frames; // double buffering
     uint32_t _sync_frame_i = 0;
     
     Image _color;

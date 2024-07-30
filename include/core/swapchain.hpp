@@ -6,7 +6,7 @@
 #include "components/image.hpp"
 
 class Swapchain {
-    struct FrameData {
+    struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_command_pool {
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
@@ -86,7 +86,7 @@ public:
         };
         _swapchain = device.createSwapchainKHR(info_swapchain);
 
-        // retrieve and wrap swapchain images (no need for views)
+        // retrieve and wrap swapchain images
         std::vector<vk::Image> images = device.getSwapchainImagesKHR(_swapchain);
         for (vk::Image image: images) {
             Image::WrapInfo info_wrap {
@@ -98,7 +98,6 @@ public:
         }
 
         // create command pools and buffers
-        _presentation_queue = queues._universal;
         _sync_frames.resize(images.size());
         for (std::size_t i = 0; i < images.size(); i++) {
             _sync_frames[i].init(device, queues);
@@ -120,7 +119,7 @@ public:
     }
     void present(vk::Device device, Image& src_image, vk::Semaphore timeline, uint64_t& timeline_val) {
         // wait for this frame's fence to be signaled and reset it
-        FrameData& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
+        SyncFrame& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
         while (vk::Result::eTimeout == device.waitForFences(frame._fence_present, vk::True, UINT64_MAX));
         device.resetFences(frame._fence_present);
         
@@ -244,6 +243,6 @@ public:
     vk::Queue _presentation_queue;
     bool _resize_requested;
 private:
-    std::vector<FrameData> _sync_frames;
+    std::vector<SyncFrame> _sync_frames;
     uint32_t _sync_frame_i = 0;
 };
