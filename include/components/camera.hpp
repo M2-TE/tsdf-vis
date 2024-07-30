@@ -52,9 +52,9 @@ struct Camera {
     }
 	void update(vma::Allocator vmalloc) {
 		// read input for movement and rotation
-		float speed = 0.1;
-		if (Keys::down(SDLK_LCTRL)) speed *= 0.25;
-		if (Keys::down(SDLK_LSHIFT)) speed *= 4.0;
+		float speed = 0.05;
+		if (Keys::down(SDLK_LCTRL)) speed /= 8.0;
+		if (Keys::down(SDLK_LSHIFT)) speed *= 8.0;
 
 		// move in direction relative to camera
 		glm::quat q_rot(_rot);

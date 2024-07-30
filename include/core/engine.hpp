@@ -33,6 +33,7 @@ public:
             },
             ._required_features {
                 .fillModeNonSolid = true,
+                .wideLines = true,
             },
             ._required_vk11_features {},
             ._required_vk12_features {

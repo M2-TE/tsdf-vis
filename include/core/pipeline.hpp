@@ -118,7 +118,7 @@ namespace Pipeline
 			// reflect shader contents
 			auto [bind_desc, attr_descs] = reflect(info.device, { info.vs_path, info.fs_path });
 
-			// create pipeline layout
+			// create pipeline layout (TODO: make configurable in CreateInfo)
 			vk::PushConstantRange pcr {
 				.stageFlags = vk::ShaderStageFlagBits::eVertex,
 				.offset = 0,
@@ -136,12 +136,12 @@ namespace Pipeline
 			vk::ShaderModule vs_module = compile(info.device, info.vs_path);
 			vk::ShaderModule fs_module = compile(info.device, info.fs_path);
 			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_stages {{
-				{
+				vk::PipelineShaderStageCreateInfo {
 					.stage = vk::ShaderStageFlagBits::eVertex,
 					.module = vs_module,
 					.pName = "main",
 				},
-				{
+				vk::PipelineShaderStageCreateInfo {
 					.stage = vk::ShaderStageFlagBits::eFragment,
 					.module = fs_module,
 					.pName = "main",
@@ -183,7 +183,7 @@ namespace Pipeline
 				.cullMode = info.cull_mode,
 				.frontFace = vk::FrontFace::eClockwise,
 				.depthBiasEnable = false,
-				.lineWidth = 1.0,
+				.lineWidth = info.poly_mode == vk::PolygonMode::eLine ? 3.0f : 1.0f,
 			};
 			vk::PipelineMultisampleStateCreateInfo info_multisampling {
 				.sampleShadingEnable = false,
