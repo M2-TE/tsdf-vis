@@ -12,6 +12,7 @@ CMRC_DECLARE(shaders);
 
 // work in progress:
 #include <ShaderLang.h>
+// todo: check if reflection using shaderlang is better than spirv_reflect
 
 auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
     -> std::vector<SpvReflectDescriptorSet*>
