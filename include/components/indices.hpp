@@ -1,7 +1,6 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-//
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
 
@@ -44,7 +43,7 @@ struct Indices {
 		std::memcpy(p_mapped_data, index_data.data(), sizeof(Index) * index_data.size());
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(Index) * index_data.size());
         vmalloc.unmapMemory(_allocation);
-        _count = index_data.size();
+        _index_n = index_data.size();
     }
     void destroy(vma::Allocator vmalloc) {
 		vmalloc.destroyBuffer(_buffer, _allocation);
@@ -54,7 +53,7 @@ struct Indices {
 	}
 
     // cpu
-    uint32_t _count = 0; // index count
+    uint32_t _index_n = 0;
 	bool _require_staging;
 	bool _require_flushing;
     // gpu

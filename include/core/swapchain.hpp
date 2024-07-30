@@ -1,6 +1,5 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
-//
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/imgui.hpp"
@@ -11,7 +10,7 @@ class Swapchain {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_command_pool {
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-                .queueFamilyIndex = queues._family_universal,
+                .queueFamilyIndex = queues._universal_i,
             };
             _command_pool = device.createCommandPool(info_command_pool);
             vk::CommandBufferAllocateInfo bufferInfo {
@@ -78,7 +77,7 @@ public:
             .imageUsage = vk::ImageUsageFlagBits::eTransferDst,
             .imageSharingMode = vk::SharingMode::eExclusive,
             .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &queues._family_universal,
+            .pQueueFamilyIndices = &queues._universal_i,
             .preTransform = capabilities.currentTransform,
             .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
             .presentMode = vk::PresentModeKHR::eFifo,
@@ -100,17 +99,17 @@ public:
 
         // create command pools and buffers
         _presentation_queue = queues._universal;
-        _frames.resize(images.size());
+        _sync_frames.resize(images.size());
         for (std::size_t i = 0; i < images.size(); i++) {
-            _frames[i].init(device, queues);
+            _sync_frames[i].init(device, queues);
         }
         _resize_requested = false;
     }
     void destroy(vk::Device device) {
-        for (auto& frame: _frames) frame.destroy(device);
+        for (auto& frame: _sync_frames) frame.destroy(device);
         for (auto& image: _images) device.destroyImageView(image._view);
         if (_images.size() > 0) device.destroySwapchainKHR(_swapchain);
-        _frames.clear();
+        _sync_frames.clear();
         _images.clear();
     }
     
@@ -121,7 +120,7 @@ public:
     }
     void present(vk::Device device, Image& src_image, vk::Semaphore timeline, uint64_t& timeline_val) {
         // wait for this frame's fence to be signaled and reset it
-        FrameData& frame = _frames[_sync_frame++ % _frames.size()];
+        FrameData& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
         while (vk::Result::eTimeout == device.waitForFences(frame._fence_present, vk::True, UINT64_MAX));
         device.resetFences(frame._fence_present);
         
@@ -245,6 +244,6 @@ public:
     vk::Queue _presentation_queue;
     bool _resize_requested;
 private:
-    std::vector<FrameData> _frames;
-    uint32_t _sync_frame = 0;
+    std::vector<FrameData> _sync_frames;
+    uint32_t _sync_frame_i = 0;
 };

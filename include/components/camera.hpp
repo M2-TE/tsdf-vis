@@ -4,7 +4,6 @@
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
 #include <fmt/core.h>
-//
 #include "core/input.hpp"
 
 struct Camera {
@@ -31,7 +30,7 @@ struct Camera {
 				vk::MemoryPropertyFlagBits::eHostVisible // ReBAR
 		};
 		std::tie(_buffer, _allocation) = vmalloc.createBuffer(info_buffer, info_allocation);
-		_p_mapped_data = vmalloc.mapMemory(_allocation);
+		_mapped_data_p = vmalloc.mapMemory(_allocation);
 
 		// check for host coherency and visibility
 		vk::MemoryPropertyFlags props = vmalloc.getAllocationMemoryProperties(_allocation);
@@ -79,7 +78,7 @@ struct Camera {
 		
 		// upload data
 		if (_require_staging) fmt::println("ReBAR is required and not present");
-		std::memcpy(_p_mapped_data, &data, sizeof(BufferData));
+		std::memcpy(_mapped_data_p, &data, sizeof(BufferData));
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(BufferData));
 	}
     
@@ -93,7 +92,7 @@ struct Camera {
     // gpu related
     vk::Buffer _buffer;
 	vma::Allocation _allocation;
-	void* _p_mapped_data;
+	void* _mapped_data_p;
 	bool _require_staging;
 	bool _require_flushing;
 };

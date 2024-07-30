@@ -2,7 +2,6 @@
 #include <string_view>
 #include <cstdint>
 #include <set>
-//
 #include <SDL3/SDL_events.h>
 #if __has_include(<imgui.h>)
 #   include <imgui.h>

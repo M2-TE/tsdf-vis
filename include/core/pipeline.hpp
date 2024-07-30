@@ -1,9 +1,7 @@
 #pragma once
 #include <string_view>
-//
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
-//
 #include "components/mesh.hpp"
 #include "components/image.hpp"
 
@@ -282,14 +280,14 @@ namespace Pipeline
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
 			}
 			// draw beg //
-			if (mesh._indices._count > 0) {
+			if (mesh._indices._index_n > 0) {
 				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
 				cmd.bindIndexBuffer(mesh._indices._buffer, 0, mesh._indices.get_type());
-				cmd.drawIndexed(mesh._indices._count, 1, 0, 0, 0);
+				cmd.drawIndexed(mesh._indices._index_n, 1, 0, 0, 0);
 			}
 			else {
 				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
-				cmd.draw(mesh._vertices._count, 1, 0, 0);
+				cmd.draw(mesh._vertices._vertex_n, 1, 0, 0);
 			}
 			// draw end //
 			cmd.endRendering();

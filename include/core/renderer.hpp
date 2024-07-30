@@ -1,10 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <cmath>
-//
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
-//
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"
 #include "core/pipeline.hpp"
@@ -18,7 +16,7 @@ class Renderer {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_pool {
                 .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-                .queueFamilyIndex = queues._family_universal,
+                .queueFamilyIndex = queues._universal_i,
             };
             _command_pool = device.createCommandPool(info_pool);
 
@@ -60,7 +58,7 @@ class Renderer {
 public:
     void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) {
         // create FrameData objects
-        for (auto& frame: _frames) frame.init(device, queues);
+        for (auto& frame: _sync_frames) frame.init(device, queues);
         
         // create image with 16 bits color depth
         Image::CreateInfo info_image {
@@ -120,7 +118,7 @@ public:
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
-        for (auto& frame: _frames) frame.destroy(device);
+        for (auto& frame: _sync_frames) frame.destroy(device);
         _color.destroy(device, vmalloc);
         _depth.destroy(device, vmalloc);
         _pipe_default.destroy(device);
@@ -134,7 +132,7 @@ public:
     }
     void render(vk::Device device, Swapchain& swapchain, Queues& queues, Scene& scene) {
         // wait for command buffer execution
-        FrameData& frame = _frames[_sync_frame++ % _frames.size()];
+        FrameData& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
         vk::SemaphoreWaitInfo info_sema_wait {
             .semaphoreCount = 1,
             .pSemaphores = &frame._timeline,
@@ -213,8 +211,8 @@ private:
     }
     
 private:
-    std::array<FrameData, 2> _frames; // double buffering
-    uint32_t _sync_frame = 0;
+    std::array<FrameData, 2> _sync_frames; // double buffering
+    uint32_t _sync_frame_i = 0;
     
     Image _color;
     Image _depth;

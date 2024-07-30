@@ -13,7 +13,7 @@ struct Mesh {
     }
     void destroy(vma::Allocator vmalloc) {
         _vertices.destroy(vmalloc);
-        if (_indices._count > 0) _indices.destroy(vmalloc);
+        if (_indices._index_n > 0) _indices.destroy(vmalloc);
     }
 
     Vertices<Vertex> _vertices;

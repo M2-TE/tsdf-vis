@@ -2,8 +2,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
 #include <SDL3/SDL_events.h>
-//
-#include "utils/device_selector.hpp"
+#include "util/device_selector.hpp"
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"
@@ -77,18 +76,18 @@ public:
         
         // create renderer components
         _queues.init(_device, queue_mappings);
-        _camera.init(_vmalloc, _queues._family_universal, _window.size());
+        _camera.init(_vmalloc, _queues._universal_i, _window.size());
         _swapchain._resize_requested = true;
         
         // initialize imgui backend
-        ImGui::impl::init_sdl(_window._p_window);
-        ImGui::impl::init_vulkan(_instance, _device, _phys_device, _queues, vk::Format::eR16G16B16A16Sfloat);
+        ImGui::impl::init_sdl(_window._window_p);
+        ImGui::impl::init_vulkan(_instance, _device, _phys_device, _queues._universal, vk::Format::eR16G16B16A16Sfloat);
         
         _running = true;
         _rendering = true;
         
         // begin constructing scenes
-        _scene.init(_vmalloc, _queues._family_universal);
+        _scene.init(_vmalloc, _queues._universal_i);
     }
     void destroy() {
         _device.waitIdle();
@@ -105,20 +104,20 @@ public:
         _instance.destroy();
     }
     
-    void execute_event(const SDL_Event* p_event) {
-        ImGui::impl::process_event(p_event);
-        switch (p_event->type) {
+    void execute_event(const SDL_Event* event_p) {
+        ImGui::impl::process_event(event_p);
+        switch (event_p->type) {
             // window handling
             case SDL_EventType::SDL_EVENT_QUIT: _running = false; break;
             case SDL_EventType::SDL_EVENT_WINDOW_RESTORED: _rendering = true; break;
             case SDL_EventType::SDL_EVENT_WINDOW_MINIMIZED: _rendering = false; break;
             case SDL_EventType::SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: _swapchain._resize_requested = true; break;
             // input handling
-            case SDL_EventType::SDL_EVENT_KEY_UP: Input::register_key_up(p_event->key); break;
-            case SDL_EventType::SDL_EVENT_KEY_DOWN: Input::register_key_down(p_event->key); break;
-            case SDL_EventType::SDL_EVENT_MOUSE_MOTION: Input::register_motion(p_event->motion);break;
-            case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_UP: Input::register_button_up(p_event->button); break;
-            case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_DOWN: Input::register_button_down(p_event->button); break;
+            case SDL_EventType::SDL_EVENT_KEY_UP: Input::register_key_up(event_p->key); break;
+            case SDL_EventType::SDL_EVENT_KEY_DOWN: Input::register_key_down(event_p->key); break;
+            case SDL_EventType::SDL_EVENT_MOUSE_MOTION: Input::register_motion(event_p->motion);break;
+            case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_UP: Input::register_button_up(event_p->button); break;
+            case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_DOWN: Input::register_button_down(event_p->button); break;
             case SDL_EventType::SDL_EVENT_WINDOW_FOCUS_LOST: Input::flush_all(); break;
             default: break;
         }
@@ -137,7 +136,7 @@ public:
 private:
     void resize() {
         _device.waitIdle();
-        SDL_SyncWindow(_window._p_window);
+        SDL_SyncWindow(_window._window_p);
         
         fmt::println("renderer rebuild triggered");
         _camera.resize(_window.size());

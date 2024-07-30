@@ -1,14 +1,12 @@
 #include <map>
 #include <set>
 #include <span>
-//
 #include <spirv_reflect.h>
 #include <cmrc/cmrc.hpp>
 #include <fmt/base.h>
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_to_string.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
-//
 #include "core/pipeline.hpp"
 CMRC_DECLARE(shaders);
 

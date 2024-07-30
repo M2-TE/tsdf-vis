@@ -5,25 +5,23 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_vulkan.h>
 #include <fmt/core.h>
-//
-#include "core/queues.hpp"
 
 namespace ImGui 
 {
     namespace impl
     {
-        static vk::DescriptorPool imgui_desc_pool;
-        static auto load_fnc(const char* p_function_name, void* p_user_data) -> PFN_vkVoidFunction {
-            const vk::Instance instance = *reinterpret_cast<vk::Instance*>(p_user_data);
-            VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr(nullptr, p_function_name);
-            return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr(instance, p_function_name);
+        static vk::DescriptorPool s_imgui_desc_pool;
+        static auto s_load_fnc(const char* function_name_p, void* user_data_p) -> PFN_vkVoidFunction {
+            const vk::Instance instance = *reinterpret_cast<vk::Instance*>(user_data_p);
+            VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr(nullptr, function_name_p);
+            return VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr(instance, function_name_p);
         }
-        void init_sdl(SDL_Window* p_window) {
+        void init_sdl(SDL_Window* window_p) {
             ImGui::CreateContext();
-            ImGui_ImplSDL3_InitForVulkan(p_window);
+            ImGui_ImplSDL3_InitForVulkan(window_p);
         }
-        void init_vulkan(vk::Instance instance, vk::Device device, vk::PhysicalDevice phys_device, Queues& queues, vk::Format color_format) {
-            bool success = ImGui_ImplVulkan_LoadFunctions(&load_fnc, &instance);
+        void init_vulkan(vk::Instance instance, vk::Device device, vk::PhysicalDevice phys_device, vk::Queue queue, vk::Format color_format) {
+            bool success = ImGui_ImplVulkan_LoadFunctions(&s_load_fnc, &instance);
             if (!success) fmt::println("imgui failed to load vulkan functions");
 
             // create temporary descriptor pool for sdl
@@ -45,7 +43,7 @@ namespace ImGui
                 .poolSizeCount = (uint32_t)pool_sizes.size(), 
                 .pPoolSizes = pool_sizes.data(),
             };
-            imgui_desc_pool = device.createDescriptorPool(info_desc_pool);
+            s_imgui_desc_pool = device.createDescriptorPool(info_desc_pool);
 
             // initialize vulkan backend
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -53,8 +51,8 @@ namespace ImGui
                 .Instance = instance,
                 .PhysicalDevice = phys_device,
                 .Device = device,
-                .Queue = queues._universal,
-                .DescriptorPool = imgui_desc_pool,
+                .Queue = queue,
+                .DescriptorPool = s_imgui_desc_pool,
                 .RenderPass = nullptr,
                 .MinImageCount = 3,
                 .ImageCount = 3,
@@ -69,8 +67,8 @@ namespace ImGui
             ImGui_ImplVulkan_Init(&info_imgui_vk);
             ImGui_ImplVulkan_CreateFontsTexture();
         }
-        bool process_event(const SDL_Event* p_event) {
-            return ImGui_ImplSDL3_ProcessEvent(p_event);
+        bool process_event(const SDL_Event* event_p) {
+            return ImGui_ImplSDL3_ProcessEvent(event_p);
         }
         void new_frame() {
             ImGui_ImplVulkan_NewFrame();
@@ -98,7 +96,7 @@ namespace ImGui
             ImGui_ImplVulkan_Shutdown();
             ImGui_ImplSDL3_Shutdown();
             ImGui::DestroyContext();
-            device.destroyDescriptorPool(imgui_desc_pool);
+            device.destroyDescriptorPool(s_imgui_desc_pool);
         }
     }
 }

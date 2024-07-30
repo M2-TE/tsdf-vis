@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-//
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
 
@@ -42,14 +41,14 @@ struct Vertices {
 		std::memcpy(p_mapped_data, vertex_data.data(), sizeof(Vertex) * vertex_data.size());
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(Vertex) * vertex_data.size());
         vmalloc.unmapMemory(_allocation);
-        _count = vertex_data.size();
+        _vertex_n = vertex_data.size();
     }
     void destroy(vma::Allocator vmalloc) {
 		vmalloc.destroyBuffer(_buffer, _allocation);
     }
 
     // cpu
-    uint32_t _count; // vertex count
+    uint32_t _vertex_n;
 	bool _require_staging;
 	bool _require_flushing;
     // gpu

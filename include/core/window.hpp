@@ -10,8 +10,8 @@ struct Window {
         if (SDL_InitSubSystem(SDL_INIT_VIDEO)) fmt::println("{}", SDL_GetError());
         
         // SDL: create window
-        _p_window = SDL_CreateWindow(name.c_str(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-        if (_p_window == nullptr) fmt::println("{}", SDL_GetError());
+        _window_p = SDL_CreateWindow(name.c_str(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+        if (_window_p == nullptr) fmt::println("{}", SDL_GetError());
 
         // SDL: query required instance extensions
         uint32_t n_extensions;
@@ -46,7 +46,7 @@ struct Window {
 
         // SDL: create surface
         VkSurfaceKHR surfaceTemp;
-        if (SDL_Vulkan_CreateSurface(_p_window, instance, nullptr, &surfaceTemp)) fmt::println("{}", SDL_GetError());
+        if (SDL_Vulkan_CreateSurface(_window_p, instance, nullptr, &surfaceTemp)) fmt::println("{}", SDL_GetError());
         _surface = surfaceTemp;
 
         return instance;
@@ -58,16 +58,16 @@ struct Window {
     
     void toggle_fullscreen() {
         _fullscreen = !_fullscreen;
-        SDL_SetWindowFullscreen(_p_window, _fullscreen);
+        SDL_SetWindowFullscreen(_window_p, _fullscreen);
     }
     auto size() -> vk::Extent2D {
         int width = 0;
         int height = 0;
-        if (SDL_GetWindowSizeInPixels(_p_window, &width, &height)) fmt::println("{}", SDL_GetError());
+        if (SDL_GetWindowSizeInPixels(_window_p, &width, &height)) fmt::println("{}", SDL_GetError());
         return vk::Extent2D((uint32_t)width, (uint32_t)height);
     }
 
-    SDL_Window* _p_window;
+    SDL_Window* _window_p;
     vk::SurfaceKHR _surface;
     bool _fullscreen = false;
 };
