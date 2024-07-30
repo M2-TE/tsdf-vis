@@ -45,6 +45,11 @@ struct Plymesh {
             // read little endian vertices
             std::vector<Vertex> raw_vertices(vert_n);
             file.read(reinterpret_cast<char*>(raw_vertices.data()), sizeof(Vertex) * raw_vertices.size());
+            // flip y and swap y with z
+            for (auto& vertex: raw_vertices) {
+                std::swap(vertex.first.y, vertex.first.z);
+                vertex.first.y *= -1.0;
+            }
 
             // read little endian faces into indices
             std::vector<uint32_t> raw_indices;
