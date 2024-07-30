@@ -108,14 +108,14 @@ private:
         return passed_version;
     }
     bool check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice physical_device) {
-        size_t n_matches = 0;
+        size_t matches_n = 0;
         auto ext_props = physical_device.enumerateDeviceExtensionProperties();
         for (auto& extension: ext_props) {
             std::string ext_name = extension.extensionName;
-            if (required_extensions.contains(ext_name)) n_matches++;
+            if (required_extensions.contains(ext_name)) matches_n++;
         }
         bool passed_extensions = false;
-        if (n_matches == _required_extensions.size()) passed_extensions = true;
+        if (matches_n == _required_extensions.size()) passed_extensions = true;
         if (passed_extensions) fmt::print("[ext] ");
         else                   fmt::print("[!ext] ");
         return passed_extensions;

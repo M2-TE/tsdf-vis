@@ -29,7 +29,7 @@ struct Indices {
 				vk::MemoryPropertyFlagBits::eHostVisible // ReBAR
 		};
 		std::tie(_buffer, _allocation) = vmalloc.createBuffer(info_buffer, info_allocation);
-		void* p_mapped_data = vmalloc.mapMemory(_allocation);
+		void* mapped_data_p = vmalloc.mapMemory(_allocation);
         
 		// check for host coherency and visibility
 		vk::MemoryPropertyFlags props = vmalloc.getAllocationMemoryProperties(_allocation);
@@ -40,7 +40,7 @@ struct Indices {
         
 		// upload data
 		if (_require_staging) fmt::println("ReBAR is recommended and not present");
-		std::memcpy(p_mapped_data, index_data.data(), sizeof(Index) * index_data.size());
+		std::memcpy(mapped_data_p, index_data.data(), sizeof(Index) * index_data.size());
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(Index) * index_data.size());
         vmalloc.unmapMemory(_allocation);
         _index_n = index_data.size();

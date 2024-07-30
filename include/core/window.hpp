@@ -14,12 +14,12 @@ struct Window {
         if (_window_p == nullptr) fmt::println("{}", SDL_GetError());
 
         // SDL: query required instance extensions
-        uint32_t n_extensions;
-        const char* const* p_extensions = SDL_Vulkan_GetInstanceExtensions(&n_extensions);
-        if (p_extensions == nullptr) fmt::println("{}", SDL_GetError());
+        uint32_t extensions_n;
+        const char* const* extensions_p = SDL_Vulkan_GetInstanceExtensions(&extensions_n);
+        if (extensions_p == nullptr) fmt::println("{}", SDL_GetError());
         // write to c++ vector
-        std::vector<const char*> extensions(n_extensions);
-        for (uint32_t i = 0; i < n_extensions; i++) extensions[i] = p_extensions[i];
+        std::vector<const char*> extensions(extensions_n);
+        for (uint32_t i = 0; i < extensions_n; i++) extensions[i] = extensions_p[i];
 
         // optionally enable debug layers
         std::vector<const char*> layers;

@@ -14,13 +14,13 @@ auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
     -> std::vector<SpvReflectDescriptorSet*>
 {
 	// enumerate desc sets
-	uint32_t n_desc_sets;
+	uint32_t refl_desc_sets_n;
 	SpvReflectResult result;
 	std::vector<SpvReflectDescriptorSet*> refl_desc_sets;
-	result = reflection.EnumerateEntryPointDescriptorSets("main", &n_desc_sets, nullptr);
+	result = reflection.EnumerateEntryPointDescriptorSets("main", &refl_desc_sets_n, nullptr);
 	if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
-	refl_desc_sets.resize(n_desc_sets);
-	result = reflection.EnumerateEntryPointDescriptorSets("main", &n_desc_sets, refl_desc_sets.data());
+	refl_desc_sets.resize(refl_desc_sets_n);
+	result = reflection.EnumerateEntryPointDescriptorSets("main", &refl_desc_sets_n, refl_desc_sets.data());
 	if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
 	return refl_desc_sets;
 }
@@ -41,12 +41,12 @@ auto Pipeline::Base::compile(vk::Device device, std::string_view path)
     };
 	return device.createShaderModule(info_shader);
 }
-auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shaderPaths) 
+auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shader_paths) 
     -> std::pair< vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>
 {
 	// read raw shader sources
 	std::vector<std::pair<size_t, const uint32_t*>> shaders;
-	for (std::string_view path: shaderPaths) {
+	for (std::string_view path: shader_paths) {
 		std::string str_path { path };
 		str_path.append(".spv");
 		cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
@@ -75,11 +75,11 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
 		// continue if not a vertex shader
 		if (stage != vk::ShaderStageFlagBits::eVertex) continue;
 
-		uint32_t n_inputs = 0;
-		auto result = reflection.EnumerateEntryPointInputVariables("main", &n_inputs, nullptr);
+		uint32_t inputs_n = 0;
+		auto result = reflection.EnumerateEntryPointInputVariables("main", &inputs_n, nullptr);
 		if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
-		std::vector<SpvReflectInterfaceVariable*> vars(n_inputs);
-		result = reflection.EnumerateEntryPointInputVariables("main", &n_inputs, vars.data());
+		std::vector<SpvReflectInterfaceVariable*> vars(inputs_n);
+		result = reflection.EnumerateEntryPointInputVariables("main", &inputs_n, vars.data());
 		if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
 
         // build bind descriptions 
@@ -131,24 +131,24 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
         for (uint32_t i = 0; i < set->binding_count; i++) {
 
 			// check if binding is unique
-			SpvReflectDescriptorBinding* p_binding = set->bindings[i];
-			auto [_, unique] = unique_bindings.emplace(p_binding->set, p_binding->binding);
+			SpvReflectDescriptorBinding* binding_p = set->bindings[i];
+			auto [_, unique] = unique_bindings.emplace(binding_p->set, binding_p->binding);
 			if (!unique) continue;
 
             // tally descriptor types for descriptor pool
-            auto [it_node, emplaced] = binding_tally.emplace((vk::DescriptorType)p_binding->descriptor_type, 1);
+            auto [it_node, emplaced] = binding_tally.emplace((vk::DescriptorType)binding_p->descriptor_type, 1);
             if (!emplaced) it_node->second++;
 
             // // reflect binding
             // fmt::println("\tset {} | binding {}: {} {}", 
-            //    p_binding->set,
-            //    p_binding->binding,
-            //    vk::to_string((vk::DescriptorType)p_binding->descriptor_type), 
-            //    p_binding->name);
+            //    binding_p->set,
+            //    binding_p->binding,
+            //    vk::to_string((vk::DescriptorType)binding_p->descriptor_type), 
+            //    binding_p->name);
             vk::DescriptorSetLayoutBinding binding {
-                .binding = p_binding->binding,
-                .descriptorType = (vk::DescriptorType)p_binding->descriptor_type,
-                .descriptorCount = p_binding->count,
+                .binding = binding_p->binding,
+                .descriptorType = (vk::DescriptorType)binding_p->descriptor_type,
+                .descriptorCount = binding_p->count,
                 .stageFlags = stage_flags, // todo: combine stages flags if its present in both
             };
             bindings.push_back(binding);

@@ -18,22 +18,22 @@ struct Grid {
 		file.open(path.data(), std::ifstream::binary);
         if (file.good()) {
             float voxelsize = 0;
-            std::size_t n_scan_points = 0;
-            std::size_t n_query_points = 0;
-            std::size_t n_cells = 0;
+            std::size_t scan_points_n = 0;
+            std::size_t query_points_n = 0;
+            std::size_t cells_n = 0;
 			
 			file.read(reinterpret_cast<char*>(&voxelsize), sizeof(float));
-			file.read(reinterpret_cast<char*>(&n_scan_points), sizeof(std::size_t));
-			file.read(reinterpret_cast<char*>(&n_query_points), sizeof(std::size_t));
-			file.read(reinterpret_cast<char*>(&n_cells), sizeof(std::size_t));
+			file.read(reinterpret_cast<char*>(&scan_points_n), sizeof(std::size_t));
+			file.read(reinterpret_cast<char*>(&query_points_n), sizeof(std::size_t));
+			file.read(reinterpret_cast<char*>(&cells_n), sizeof(std::size_t));
             
             // read header
-            fmt::println("voxelsize of: {} with {} scan points, {} query points and {} cells", voxelsize, n_scan_points, n_query_points, n_cells);
+            fmt::println("voxelsize of: {} with {} scan points, {} query points and {} cells", voxelsize, scan_points_n, query_points_n, cells_n);
             
             // alloc and read scan points
 			std::vector<glm::vec3> scan_points;
-            scan_points.reserve(n_scan_points);
-            for (std::size_t i = 0; i < n_scan_points; i++) {
+            scan_points.reserve(scan_points_n);
+            for (std::size_t i = 0; i < scan_points_n; i++) {
                 glm::vec3 scan_point;
 				file.read(reinterpret_cast<char*>(&scan_point), sizeof(glm::vec3));
                 std::swap(scan_point.y, scan_point.z);
@@ -44,8 +44,8 @@ struct Grid {
 
 			// alloc and read query points
 			std::vector<QueryPoint> query_points;
-            query_points.reserve(n_query_points);
-            for (std::size_t i = 0; i < n_query_points; i++) {
+            query_points.reserve(query_points_n);
+            for (std::size_t i = 0; i < query_points_n; i++) {
                 glm::vec3 position;
 				float signed_distance;
 				file.read(reinterpret_cast<char*>(&position), sizeof(glm::vec3));
@@ -56,8 +56,8 @@ struct Grid {
             }
             // alloc and read cells (indexing into query points)
             std::vector<Index> cell_indices;
-            cell_indices.reserve(n_cells * 8); // TODO: multiply with indices per cell
-            for (std::size_t i = 0; i < n_cells; i++) {
+            cell_indices.reserve(cells_n * 8); // TODO: multiply with indices per cell
+            for (std::size_t i = 0; i < cells_n; i++) {
                 std::array<Index, 8> cell;
 				file.read(reinterpret_cast<char*>(cell.data()), sizeof(cell));
                 // build cell edge via line strip indices
