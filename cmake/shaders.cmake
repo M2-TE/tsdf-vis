@@ -15,6 +15,8 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     list(APPEND SPIRV_BINARY_FILES "${SPIRV}")
 endforeach(GLSL)
 
+# TODO: instead of compiling here, simply check validity of shaders
+
 FetchContent_Declare(cmrc GIT_REPOSITORY "https://github.com/vector-of-bool/cmrc.git" GIT_TAG "2.0.1" GIT_SHALLOW ON)
 FetchContent_MakeAvailable(cmrc)
 cmrc_add_resource_library(shaders ALIAS cmrc::shaders WHENCE "${CMAKE_CURRENT_BINARY_DIR}/shaders/" "${SPIRV_BINARY_FILES}")

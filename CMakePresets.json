@@ -31,6 +31,12 @@
             "configuration": "Release"
         },
         {
+            "name": "release_debug_multi",
+            "displayName": "Release (Debug Info)",
+            "configurePreset": "multi",
+            "configuration": "RelWithDebInfo"
+        },
+        {
             "name": "debug_multi",
             "displayName": "Debug",
             "configurePreset": "multi",
@@ -41,6 +47,12 @@
             "displayName": "Release",
             "configurePreset": "msbuild",
             "configuration": "Release"
+        },
+        {
+            "name": "release_debug_msbuild",
+            "displayName": "Release (Debug Info)",
+            "configurePreset": "msbuild",
+            "configuration": "RelWithDebInfo"
         },
         {
             "name": "debug_msbuild",

@@ -10,6 +10,9 @@
 #include "core/pipeline.hpp"
 CMRC_DECLARE(shaders);
 
+// work in progress:
+#include <ShaderLang.h>
+
 auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
     -> std::vector<SpvReflectDescriptorSet*>
 {
