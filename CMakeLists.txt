@@ -12,6 +12,8 @@ add_executable(${PROJECT_NAME}
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/pipeline.cpp")
 target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include/")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
+set_target_properties(${PROJECT_NAME} PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/")
 
 # fetch project dependencies
 include(FetchContent)
@@ -22,6 +24,5 @@ include(vma)
 include(sdl)
 include(fmt)
 include(glm)
-include(spirv)
 include(imgui)
 include(shaders)
