@@ -21,11 +21,30 @@ struct Window {
         std::vector<const char*> extensions(extensions_n);
         for (uint32_t i = 0; i < extensions_n; i++) extensions[i] = extensions_p[i];
 
+        // TODO: check availability of requested extensions
+        
+
         // optionally enable debug layers
         std::vector<const char*> layers;
 #       ifdef VULKAN_VALIDATION_LAYERS
-            layers.push_back("VK_LAYER_KHRONOS_validation");
+            std::string validation_layer = "VK_LAYER_KHRONOS_validation";
+            // only request if validation layers are available
+            auto layer_props = vk::enumerateInstanceLayerProperties();
+            bool available = false;
+            for (auto& layer: layer_props) {
+                auto res = std::strcmp(layer.layerName, validation_layer.data());
+                if (res) {
+                    available = true;
+                    break;
+                }
+            }
+            if (available) {
+                layers.push_back(validation_layer.data());
+                fmt::println("success");
+            }
+            else fmt::println("Validation layers requested but not present");
 #       endif
+        exit(0);
 
         // Vulkan: create instance
         vk::ApplicationInfo info_app {
