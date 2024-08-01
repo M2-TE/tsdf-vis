@@ -1,4 +1,5 @@
 #pragma once
+#include <set>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
@@ -21,8 +22,20 @@ struct Window {
         std::vector<const char*> extensions(extensions_n);
         for (uint32_t i = 0; i < extensions_n; i++) extensions[i] = extensions_p[i];
 
-        // TODO: check availability of requested extensions
-        
+        // check availability of extensions requested by sdl
+        auto available_extensions = vk::enumerateInstanceExtensionProperties();
+        std::set<std::string> extension_set;
+        std::copy(extensions.cbegin(), extensions.cend(), std::inserter(extension_set, extension_set.end()));
+        for (auto& ext: available_extensions) {
+            std::string ext_str = ext.extensionName;
+            auto ext_it = extension_set.find(ext_str);
+            if (ext_it != extension_set.end()) extension_set.erase(ext_it);
+        }
+        if (extension_set.size() > 0) {
+            fmt::println("Missing vital instance extensions required by SDL:");
+            for (auto& ext: extension_set) fmt::println("\t{}", ext);
+            exit(0);
+        }
 
         // optionally enable debug layers
         std::vector<const char*> layers;
@@ -44,7 +57,6 @@ struct Window {
             }
             else fmt::println("Validation layers requested but not present");
 #       endif
-        exit(0);
 
         // Vulkan: create instance
         vk::ApplicationInfo info_app {
