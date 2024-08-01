@@ -7,7 +7,6 @@
 #include <vk_mem_alloc.hpp>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
-//
 #include "components/mesh.hpp"
 #include "components/vertices.hpp"
 #include "components/indices.hpp"
