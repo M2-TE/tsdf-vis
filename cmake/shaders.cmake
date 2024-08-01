@@ -37,6 +37,8 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE "${glslang_SOURCE_DIR}
 set(GLSLANG_BINARY_DIR "${glslang_BINARY_DIR}/StandAlone")
 
 # compile shaders for now, TODO: simply validate them, they can be compiled at runtime
+# todo: instead of just simple validation, maybe also do #include resolve
+# todo: or maybe just do it at runtime..
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders/")
 file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS 
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
@@ -49,7 +51,7 @@ foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
         COMMENT "Compiling shader: ${FILE_NAME}"
         OUTPUT  "${SPIRV_FILE}"
         COMMAND "${GLSLANG_BINARY_DIR}/$<CONFIG>/glslang" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
-        DEPENDS "${GLSL_FILE}" "${GLSLANG_BINARY_DIR}/$<CONFIG>/glslang")
+        DEPENDS "${GLSL_FILE}" glslang-standalone)
     list(APPEND SPIRV_BINARY_FILES "${SPIRV_FILE}")
 endforeach(GLSL_FILE)
 FetchContent_Declare(cmrc GIT_REPOSITORY "https://github.com/vector-of-bool/cmrc.git" GIT_TAG "2.0.1" GIT_SHALLOW ON)
