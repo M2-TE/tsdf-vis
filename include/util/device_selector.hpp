@@ -145,8 +145,6 @@ private:
         auto fnc_sorter = [](QueueCount& a, QueueCount& b) {
             return a.second < b.second;
         };
-        // default queue priority
-        float priority = 1.0f;
 
         // contains queue family indices for requested queues
         std::vector<uint32_t> queue_mappings(_required_queues.size());
@@ -176,7 +174,7 @@ private:
                 info_queues.push_back({
                     .queueFamilyIndex = queue_family_index,
                     .queueCount = 1,
-                    .pQueuePriorities = &priority,
+                    .pQueuePriorities = &queue_priority,
                 });
             }
         }
@@ -193,4 +191,6 @@ public:
     vk::PhysicalDeviceVulkan12Features _required_vk12_features;
     vk::PhysicalDeviceVulkan13Features _required_vk13_features;
     std::vector<vk::QueueFlags> _required_queues;
+private:
+    static constexpr float queue_priority = 1.0f;
 };
