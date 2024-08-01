@@ -46,15 +46,9 @@ struct Window {
             bool available = false;
             for (auto& layer: layer_props) {
                 auto res = std::strcmp(layer.layerName, validation_layer.data());
-                if (res) {
-                    available = true;
-                    break;
-                }
+                if (res) available = true;
             }
-            if (available) {
-                layers.push_back(validation_layer.data());
-                fmt::println("success");
-            }
+            if (available) layers.push_back(validation_layer.data());
             else fmt::println("Validation layers requested but not present");
 #       endif
 
