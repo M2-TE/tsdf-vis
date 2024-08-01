@@ -1,28 +1,31 @@
 #define VULKAN_HPP_USE_REFLECT
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_to_string.hpp>
 #include "util/device_selector.hpp"
 
 bool DeviceSelector::check_api_ver(vk::PhysicalDeviceProperties& props) {
-    bool passed_version = true;
-    if (vk::apiVersionMajor(props.apiVersion) > _required_major) passed_version = false;
-    if (vk::apiVersionMinor(props.apiVersion) > _required_minor) passed_version = false;
-    if (passed_version) fmt::print("[api] ");
-    else                fmt::print("[!api] ");
-    return passed_version;
+    bool passed = true;
+    if (vk::apiVersionMajor(props.apiVersion) > _required_major) passed = false;
+    if (vk::apiVersionMinor(props.apiVersion) > _required_minor) passed = false;
+    if (!passed) fmt::println("\tMissing vulkan {}.{} support", _required_major, _required_minor);
+    return passed;
 }
-bool DeviceSelector::check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice physical_device) {
-    size_t matches_n = 0;
+bool DeviceSelector::check_extensions(std::set<std::string> required_extensions, vk::PhysicalDevice physical_device) {
     auto ext_props = physical_device.enumerateDeviceExtensionProperties();
     for (auto& extension: ext_props) {
         std::string ext_name = extension.extensionName;
-        if (required_extensions.contains(ext_name)) matches_n++;
+        auto ext_it = required_extensions.find(ext_name);
+        // erase from set if found
+        if (ext_it != required_extensions.end()) {
+            required_extensions.erase(ext_it);
+        }
     }
-    bool passed_extensions = false;
-    if (matches_n == _required_extensions.size()) passed_extensions = true;
-    if (passed_extensions) fmt::print("[ext] ");
-    else                   fmt::print("[!ext] ");
-    return passed_extensions;
+    // print missing extensions, if any
+    for (auto& extension: required_extensions) {
+        fmt::println("\tMissing device extension: {}", extension);
+    }
+    // pass if all required extensions were erased
+    bool passed = required_extensions.size() == 0;
+    return passed;
 
 }
 bool DeviceSelector::check_features(vk::PhysicalDeviceFeatures& features) {
@@ -55,9 +58,7 @@ bool DeviceSelector::check_features(vk::PhysicalDeviceFeatures& features) {
     for (std::size_t i = 0; i < available_features.size(); i++) {
         if (required_features[i] && !available_features[i]) passed = false;
     }
-
-    if (passed) fmt::print("[feat] ");
-    else        fmt::print("[!feat] ");
+    if (!passed) fmt::println("\tMissing vulkan 1.0 device features");
     return passed;
 }
 bool DeviceSelector::check_features(vk::PhysicalDeviceVulkan11Features& features) {
@@ -91,8 +92,7 @@ bool DeviceSelector::check_features(vk::PhysicalDeviceVulkan11Features& features
         if (required_features[i] && !available_features[i]) passed = false;
     }
 
-    if (passed) fmt::print("[feat11] ");
-    else        fmt::print("[!feat11] ");
+    if (!passed) fmt::println("\tMissing vulkan 1.1 device features");
     return passed;
 }
 bool DeviceSelector::check_features(vk::PhysicalDeviceVulkan12Features& features) {
@@ -125,8 +125,7 @@ bool DeviceSelector::check_features(vk::PhysicalDeviceVulkan12Features& features
     for (std::size_t i = 0; i < available_features.size(); i++) {
         if (required_features[i] && !available_features[i]) passed = false;
     }
-    if (passed) fmt::print("[feat12] ");
-    else        fmt::print("[!feat12] ");
+    if (!passed) fmt::println("\tMissing vulkan 1.2 device features");
     return passed;
 }
 bool DeviceSelector::check_features(vk::PhysicalDeviceVulkan13Features& features) {
@@ -159,7 +158,6 @@ bool DeviceSelector::check_features(vk::PhysicalDeviceVulkan13Features& features
     for (std::size_t i = 0; i < available_features.size(); i++) {
         if (required_features[i] && !available_features[i]) passed = false;
     }
-    if (passed) fmt::print("[feat13] ");
-    else        fmt::print("[!feat13] ");
+    if (!passed) fmt::println("\tMissing vulkan 1.3 device features");
     return passed;
 }

@@ -21,8 +21,9 @@ struct DeviceSelector {
         fmt::println("Available devices:");
         for (vk::PhysicalDevice device: phys_devices) {
             auto props = device.getProperties();
-            bool passed = true;
+            fmt::println("-> {}", (const char*)props.deviceName);
 
+            bool passed = true;
             // check vulkan api version
             passed &= check_api_ver(props);
             // check requested extensions
@@ -51,8 +52,6 @@ struct DeviceSelector {
                 }
                 matching_devices.emplace_back(device, is_preferred, memory_size);
             }
-            const char* dev_name = props.deviceName;
-            fmt::println("-> {}", dev_name);
         }
 
         // optionally bail out
@@ -99,7 +98,7 @@ struct DeviceSelector {
 
 private:
     bool check_api_ver(vk::PhysicalDeviceProperties& props);
-    bool check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice physical_device);
+    bool check_extensions(std::set<std::string> required_extensions, vk::PhysicalDevice physical_device);
     bool check_features(vk::PhysicalDeviceFeatures& features);
     bool check_features(vk::PhysicalDeviceVulkan11Features& features);
     bool check_features(vk::PhysicalDeviceVulkan12Features& features);
@@ -118,8 +117,7 @@ private:
             passed |= b;
         }
 
-        if (passed) fmt::print("[present] ");
-        else        fmt::print("[!present] ");
+        if (!passed) fmt::print("Missing presentation capabilities");
         return passed;
     }
     auto create_queue_infos(vk::PhysicalDevice physical_device) -> std::pair<std::vector<vk::DeviceQueueCreateInfo>, std::vector<uint32_t>> {
