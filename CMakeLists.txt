@@ -5,11 +5,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(_global)
 
 # create and configure main executable
-add_executable(${PROJECT_NAME} 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ext.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/imgui.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/pipeline.cpp")
+file(GLOB_RECURSE CPP_SOURCE_FILES CONFIGURE_DEPENDS 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+add_executable(${PROJECT_NAME} ${CPP_SOURCE_FILES})
 target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include/")
 target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
 set_target_properties(${PROJECT_NAME} PROPERTIES 

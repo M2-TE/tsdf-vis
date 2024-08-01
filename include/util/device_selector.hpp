@@ -1,7 +1,6 @@
 #pragma once
 #include <set>
 #include <bit>
-//
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
 
@@ -99,84 +98,13 @@ struct DeviceSelector {
     }
 
 private:
-    bool check_api_ver(vk::PhysicalDeviceProperties& props) {
-        bool passed_version = true;
-        if (vk::apiVersionMajor(props.apiVersion) > _required_major) passed_version = false;
-        if (vk::apiVersionMinor(props.apiVersion) > _required_minor) passed_version = false;
-        if (passed_version) fmt::print("[api] ");
-        else                fmt::print("[!api] ");
-        return passed_version;
-    }
-    bool check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice physical_device) {
-        size_t matches_n = 0;
-        auto ext_props = physical_device.enumerateDeviceExtensionProperties();
-        for (auto& extension: ext_props) {
-            std::string ext_name = extension.extensionName;
-            if (required_extensions.contains(ext_name)) matches_n++;
-        }
-        bool passed_extensions = false;
-        if (matches_n == _required_extensions.size()) passed_extensions = true;
-        if (passed_extensions) fmt::print("[ext] ");
-        else                   fmt::print("[!ext] ");
-        return passed_extensions;
-
-    }
-    bool check_features(vk::PhysicalDeviceFeatures& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceFeatures)> FeatureArray;
-        FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
-        FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_features);
-        bool passed_features = true;
-        for (size_t i = 0; i < available_features->size(); i++) {
-            bool required = (*required_features)[i];
-            bool available = (*available_features)[i];
-            if (required && !available) passed_features = false;
-        }
-        if (passed_features) fmt::print("[feat] ");
-        else                 fmt::print("[!feat] ");
-        return passed_features;
-    }
-    bool check_features(vk::PhysicalDeviceVulkan11Features& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan11Features)> FeatureArray;
-        FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
-        FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_vk11_features);
-        bool passed_features = true;
-        for (size_t i = 0; i < available_features->size(); i++) {
-            bool required = (*required_features)[i];
-            bool available = (*available_features)[i];
-            if (required && !available) passed_features = false;
-        }
-        if (passed_features) fmt::print("[feat11] ");
-        else                 fmt::print("[!feat11] ");
-        return passed_features;
-    }
-    bool check_features(vk::PhysicalDeviceVulkan12Features& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan12Features)> FeatureArray;
-        FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
-        FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_vk12_features);
-        bool passed_features = true;
-        for (size_t i = 0; i < available_features->size(); i++) {
-            bool required = (*required_features)[i];
-            bool available = (*available_features)[i];
-            if (required && !available) passed_features = false;
-        }
-        if (passed_features) fmt::print("[feat12] ");
-        else                 fmt::print("[!feat12] ");
-        return passed_features;
-    }
-    bool check_features(vk::PhysicalDeviceVulkan13Features& features) {
-        typedef std::array<bool, sizeof(vk::PhysicalDeviceVulkan13Features)> FeatureArray;
-        FeatureArray* available_features = reinterpret_cast<FeatureArray*>(&features);
-        FeatureArray* required_features = reinterpret_cast<FeatureArray*>(&_required_vk13_features);
-        bool passed_features = true;
-        for (size_t i = 0; i < available_features->size(); i++) {
-            bool required = (*required_features)[i];
-            bool available = (*available_features)[i];
-            if (required && !available) passed_features = false;
-        }
-        if (passed_features) fmt::print("[feat13] ");
-        else                 fmt::print("[!feat13] ");
-        return passed_features;
-    }
+    bool check_api_ver(vk::PhysicalDeviceProperties& props);
+    bool check_extensions(std::set<std::string>& required_extensions, vk::PhysicalDevice physical_device);
+    bool check_features(vk::PhysicalDeviceFeatures& features);
+    bool check_features(vk::PhysicalDeviceVulkan11Features& features);
+    bool check_features(vk::PhysicalDeviceVulkan12Features& features);
+    bool check_features(vk::PhysicalDeviceVulkan13Features& features);
+    
     bool check_presentation(vk::PhysicalDevice physical_device, vk::SurfaceKHR surface) {
         // check if presentation capabilties are required
         if (surface == nullptr) return true;
