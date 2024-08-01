@@ -10,10 +10,6 @@
 #include "core/pipeline.hpp"
 CMRC_DECLARE(shaders);
 
-// work in progress:
-#include <ShaderLang.h>
-// todo: check if reflection using shaderlang is better than spirv_reflect
-
 auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
     -> std::vector<SpvReflectDescriptorSet*>
 {
@@ -31,14 +27,12 @@ auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
 auto Pipeline::Base::compile(vk::Device device, std::string_view path)
     -> vk::ShaderModule
 {
-	std::string str_path { path };
-	str_path.append(".spv");
 	cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
-	if (!fs.exists(str_path)) {
-		fmt::println("could not find shader: {}", str_path);
+	if (!fs.exists(path.data())) {
+		fmt::println("could not find shader: {}", path.data());
 		exit(-1);
 	}
-	cmrc::file file = fs.open(str_path);
+	cmrc::file file = fs.open(path.data());
     vk::ShaderModuleCreateInfo info_shader {
         .codeSize = file.size(),
         .pCode = reinterpret_cast<const uint32_t*>(file.cbegin()),
@@ -51,14 +45,12 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
 	// read raw shader sources
 	std::vector<std::pair<size_t, const uint32_t*>> shaders;
 	for (std::string_view path: shader_paths) {
-		std::string str_path { path };
-		str_path.append(".spv");
 		cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
-		if (!fs.exists(str_path)) {
-			fmt::println("could not find shader: {}", str_path);
+		if (!fs.exists(path.data())) {
+			fmt::println("could not find shader: {}", path.data());
 			exit(-1);
 		}
-		cmrc::file file = fs.open(str_path);
+		cmrc::file file = fs.open(path.data());
 		shaders.emplace_back(file.size(), reinterpret_cast<const uint32_t*>(file.cbegin()));
 	}
 
