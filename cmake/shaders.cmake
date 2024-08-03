@@ -50,7 +50,7 @@ foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
     add_custom_command(
         COMMENT "Compiling shader: ${FILE_NAME}"
         OUTPUT  "${SPIRV_FILE}"
-        COMMAND glslang-standalone --enhanced-msgs -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
+        COMMAND glslang-standalone --enhanced-msgs --quiet -Os -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
         DEPENDS "${GLSL_FILE}" glslang-standalone)
     list(APPEND SPIRV_BINARY_FILES "${SPIRV_FILE}")
 endforeach(GLSL_FILE)
