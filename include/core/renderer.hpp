@@ -87,7 +87,7 @@ public:
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
             .depth_write = true, .depth_test = true,
-            .vs_path = "default.vert", .fs_path = "default.frag",
+            .vs_path = "defaults/default.vert", .fs_path = "defaults/default.frag",
         };
         _pipe_default.init(info_pipeline);
         // specifically for pointclouds and tsdf cells
@@ -97,7 +97,7 @@ public:
             .primitive_topology = vk::PrimitiveTopology::ePointList,
             .cull_mode = vk::CullModeFlagBits::eNone,
             .depth_write = false, .depth_test = true,
-            .vs_path = "scan_points.vert", .fs_path = "scan_points.frag",
+            .vs_path = "extra/scan_points.vert", .fs_path = "extra/scan_points.frag",
         };
         _pipe_scan_points.init(info_pipeline);
         info_pipeline = {
@@ -108,7 +108,7 @@ public:
             .cull_mode = vk::CullModeFlagBits::eNone,
             .blend_enabled = true,
             .depth_write = false, .depth_test = true,
-            .vs_path = "cells.vert", .fs_path = "cells.frag",
+            .vs_path = "extra/cells.vert", .fs_path = "extra/cells.frag",
         };
         _pipe_cells.init(info_pipeline);
 
@@ -116,6 +116,8 @@ public:
         _pipe_default.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
+
+        smaa_init(device, vmalloc, extent);
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _sync_frames) frame.destroy(device);
@@ -124,6 +126,7 @@ public:
         _pipe_default.destroy(device);
         _pipe_scan_points.destroy(device);
         _pipe_cells.destroy(device);
+        smaa_destroy(device, vmalloc);
     }
     
     void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) { // todo: proper resize
@@ -210,6 +213,43 @@ private:
         _pipe_cells.execute(cmd, _color, _depth, scene._grid._query_points, false);
     }
     
+    void smaa_init(vk::Device device, vma::Allocator vmalloc, vk::Extent2D extent) {
+        // create smaa edges and blend images
+        Image::CreateInfo info_image {
+            .device = device, .vmalloc = vmalloc,
+            .format = vk::Format::eR16G16B16A16Sfloat,
+            .extent { extent.width, extent.height, 1 },
+            .usage = 
+                vk::ImageUsageFlagBits::eColorAttachment | 
+                vk::ImageUsageFlagBits::eSampled
+        };
+        _smaa_edges.init(info_image);
+        _smaa_blend.init(info_image);
+        
+        // create smaa pipeline
+        Pipeline::Graphics::CreateInfo info_pipeline {
+            .device = device, .extent = extent,
+            .cull_mode = vk::CullModeFlagBits::eNone,
+            .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
+        };
+        _pipe_smaa_edges.init(info_pipeline);
+        info_pipeline = {
+            .device = device, .extent = extent,
+            .cull_mode = vk::CullModeFlagBits::eNone,
+            .vs_path = "smaa/blending_calc.vert", .fs_path = "smaa/blending_calc.frag",
+        };
+        _pipe_smaa_blend.init(info_pipeline);
+    }
+    void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
+        _smaa_edges.destroy(device, vmalloc);
+        _smaa_blend.destroy(device, vmalloc);
+        _pipe_smaa_edges.destroy(device);
+        _pipe_smaa_blend.destroy(device);
+    }
+    void smaa_execute() {
+
+    }
+
 private:
     std::array<SyncFrame, 2> _sync_frames; // double buffering
     uint32_t _sync_frame_i = 0;
@@ -219,4 +259,10 @@ private:
     Pipeline::Graphics _pipe_default;
     Pipeline::Graphics _pipe_scan_points;
     Pipeline::Graphics _pipe_cells;
+
+    // smaa:
+    Pipeline::Graphics _pipe_smaa_edges;
+    Pipeline::Graphics _pipe_smaa_blend;
+    Image _smaa_edges;
+    Image _smaa_blend;
 };

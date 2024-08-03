@@ -35,7 +35,8 @@ public:
                 .fillModeNonSolid = true,
                 .wideLines = true,
             },
-            ._required_vk11_features {},
+            ._required_vk11_features {
+            },
             ._required_vk12_features {
                 .timelineSemaphore = true,
             },
@@ -65,8 +66,7 @@ public:
             .vkGetDeviceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr,
         };
         vma::AllocatorCreateInfo info_vmalloc {
-            .flags = 
-                vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
+            .flags = vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
             .physicalDevice = _phys_device,
             .device = _device,
             .pVulkanFunctions = &vk_funcs,
