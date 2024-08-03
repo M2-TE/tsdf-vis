@@ -20,17 +20,18 @@ struct Image {
     struct TransitionInfo {
         vk::CommandBuffer cmd;
         vk::ImageLayout new_layout;
-        vk::PipelineStageFlags2 src_stage = vk::PipelineStageFlagBits2::eAllCommands;
         vk::PipelineStageFlags2 dst_stage = vk::PipelineStageFlagBits2::eAllCommands;
-        vk::AccessFlags2 src_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
         vk::AccessFlags2 dst_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
     };
+    
     void init(CreateInfo& info) {
         _owning = true;
         _format = info.format;
         _extent = info.extent;
         _aspects = info.aspects;
         _last_layout = vk::ImageLayout::eUndefined;
+        _last_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
+        _last_stage = vk::PipelineStageFlagBits2::eAllCommands;
         // create image
         vk::ImageCreateInfo info_image {
             .imageType = vk::ImageType::e2D,
@@ -83,13 +84,12 @@ struct Image {
             vmalloc.destroyImage(_image, _allocation);
             device.destroyImageView(_view);
         }
-        _last_layout = vk::ImageLayout::eUndefined;
     }
     
     void transition_layout(TransitionInfo& info) {
         vk::ImageMemoryBarrier2 image_barrier {
-            .srcStageMask = info.src_stage,
-            .srcAccessMask = info.src_access,
+            .srcStageMask = _last_stage,
+            .srcAccessMask = _last_access,
             .dstStageMask = info.dst_stage,
             .dstAccessMask = info.dst_access,
             .oldLayout = _last_layout,
@@ -109,6 +109,8 @@ struct Image {
         };
         info.cmd.pipelineBarrier2(info_dep);
         _last_layout = info.new_layout;
+        _last_access = info.dst_access;
+        _last_stage = info.dst_stage;
     }
     void blit(vk::CommandBuffer cmd, Image& src_image) {
         vk::ImageBlit2 region {
@@ -150,5 +152,7 @@ struct Image {
     vk::Format _format;
     vk::ImageAspectFlags _aspects;
     vk::ImageLayout _last_layout;
+    vk::AccessFlags2 _last_access;
+    vk::PipelineStageFlags2 _last_stage;
     bool _owning;
 };

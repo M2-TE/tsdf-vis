@@ -191,9 +191,7 @@ private:
         Image::TransitionInfo info_transition {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite,
             .dst_access = vk::AccessFlagBits2::eMemoryWrite,
         };
         dst_image.transition_layout(info_transition);
@@ -204,9 +202,7 @@ private:
         Image::TransitionInfo info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eTransferSrcOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_stage = vk::PipelineStageFlagBits2::eBlit,
-            .src_access = vk::AccessFlagBits2::eMemoryWrite,
             .dst_access = vk::AccessFlagBits2::eMemoryRead,
         };
         src_image.transition_layout(info_transition);
@@ -214,9 +210,7 @@ private:
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eTransferDstOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
             .dst_stage = vk::PipelineStageFlagBits2::eBlit,
-            .src_access = vk::AccessFlagBits2::eMemoryRead,
             .dst_access = vk::AccessFlagBits2::eMemoryWrite,
         };
         _images[swap_index].transition_layout(info_transition);
@@ -227,9 +221,7 @@ private:
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::ePresentSrcKHR,
-            .src_stage = vk::PipelineStageFlagBits2::eBlit,
             .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .src_access = vk::AccessFlagBits2::eMemoryWrite,
             .dst_access = vk::AccessFlagBits2::eMemoryRead,
         };
         _images[swap_index].transition_layout(info_transition);

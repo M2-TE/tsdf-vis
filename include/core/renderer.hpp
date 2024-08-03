@@ -180,9 +180,7 @@ private:
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eAllCommands,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eMemoryRead,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _color.transition_layout(info_transition);
@@ -244,18 +242,14 @@ private:
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
         _color.transition_layout(info_transition);
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentRead,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _smaa_edges.transition_layout(info_transition);
@@ -265,18 +259,14 @@ private:
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
         _smaa_edges.transition_layout(info_transition);
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentRead,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _smaa_blend.transition_layout(info_transition);
@@ -286,18 +276,14 @@ private:
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
         _smaa_blend.transition_layout(info_transition);
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentRead,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _color.transition_layout(info_transition);
