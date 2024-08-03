@@ -113,6 +113,9 @@ struct Image {
         void* mapped_data_p = vmalloc.mapMemory(staging_alloc);
         std::memcpy(mapped_data_p, tex_data.data(), tex_data.size());
         vmalloc.unmapMemory(staging_alloc);
+
+        // copy data to image
+        // TODO
         
         // clean up staging buffer
         vmalloc.destroyBuffer(staging_buffer, staging_alloc);

@@ -170,7 +170,7 @@ public:
         queues._universal.submit(info_submit);
 
         // present drawn image
-        swapchain.present(device, _color, frame._timeline, frame._timeline_val);
+        swapchain.present(device, _smaa_output, frame._timeline, frame._timeline_val);
     }
     
 private:
@@ -197,8 +197,20 @@ private:
     }
     
     void smaa_init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
-        // create smaa edges and blend images
+        // create output image with 16 bits color depth
         Image::CreateInfo info_image {
+            .device = device, .vmalloc = vmalloc,
+            .format = vk::Format::eR16G16B16A16Sfloat,
+            .extent { extent.width, extent.height, 1 },
+            .usage = 
+                vk::ImageUsageFlagBits::eColorAttachment |
+                vk::ImageUsageFlagBits::eTransferSrc |
+                vk::ImageUsageFlagBits::eSampled
+        };
+        _smaa_output.init(info_image);
+
+        // create smaa edges and blend images
+        info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR16G16B16A16Sfloat,
             .extent { extent.width, extent.height, 1 },
@@ -273,12 +285,14 @@ private:
         _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 1, _smaa_area_tex);
         _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 2, _smaa_search_tex);
         _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _smaa_blend);
+        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _color);
     }
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
+        _smaa_search_tex.destroy(device, vmalloc);
+        _smaa_area_tex.destroy(device, vmalloc);
+        _smaa_output.destroy(device, vmalloc);
         _smaa_edges.destroy(device, vmalloc);
         _smaa_blend.destroy(device, vmalloc);
-        _smaa_area_tex.destroy(device, vmalloc);
-        _smaa_search_tex.destroy(device, vmalloc);
         _pipe_smaa_edge_detection.destroy(device);
         _pipe_smaa_blend_weight_calc.destroy(device);
         _pipe_smaa_neigh_blending.destroy(device);
@@ -333,8 +347,8 @@ private:
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
-        _color.transition_layout(info_transition);
-        _pipe_smaa_neigh_blending.execute(cmd, _color, vk::AttachmentLoadOp::eDontCare);
+        _smaa_output.transition_layout(info_transition);
+        _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eDontCare);
     }
 
 private:
@@ -351,8 +365,9 @@ private:
     Pipeline::Graphics _pipe_smaa_edge_detection;
     Pipeline::Graphics _pipe_smaa_blend_weight_calc;
     Pipeline::Graphics _pipe_smaa_neigh_blending;
-    Image _smaa_edges;
+    Image _smaa_search_tex; // constant
+    Image _smaa_area_tex; // constant
+    Image _smaa_edges; // todo: reduce to 8/16 bits
     Image _smaa_blend;
-    Image _smaa_area_tex;
-    Image _smaa_search_tex;
+    Image _smaa_output;
 };
