@@ -37,7 +37,7 @@ FetchContent_MakeAvailable(glslang)
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders/")
 file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*")
 foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
-    get_filename_component(FILE_NAME "${GLSL_FILE}" NAME)
+    file(RELATIVE_PATH FILE_NAME "${CMAKE_CURRENT_SOURCE_DIR}/shaders" "${GLSL_FILE}")
     set(SPIRV_FILE "${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME}")
     add_custom_command(
         COMMENT "Compiling shader: ${FILE_NAME}"
