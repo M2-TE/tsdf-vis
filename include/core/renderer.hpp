@@ -120,7 +120,7 @@ public:
         _pipe_default.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        smaa_init(device, vmalloc, extent);
+        smaa_init(device, vmalloc, queues, extent);
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _sync_frames) frame.destroy(device);
@@ -151,10 +151,7 @@ public:
         
         // record command buffer
         vk::CommandBuffer cmd = frame._command_buffer;
-        vk::CommandBufferBeginInfo info_cmd_begin {
-            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit
-        };
-        cmd.begin(info_cmd_begin);
+        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         execute_pipes(device, cmd, scene);
         cmd.end();
         
@@ -199,7 +196,7 @@ private:
         smaa_execute(cmd);
     }
     
-    void smaa_init(vk::Device device, vma::Allocator vmalloc, vk::Extent2D extent) {
+    void smaa_init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
         // create smaa edges and blend images
         Image::CreateInfo info_image {
             .device = device, .vmalloc = vmalloc,
@@ -229,6 +226,26 @@ private:
         };
         _smaa_area_tex.init(info_image);
         _smaa_area_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
+
+        // transition smaa textures to their permanent layouts
+        vk::CommandBuffer cmd = _sync_frames[0]._command_buffer;
+        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+        Image::TransitionInfo info_transition {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+        };
+        _smaa_search_tex.transition_layout(info_transition);
+        _smaa_area_tex.transition_layout(info_transition);
+        cmd.end();
+        // submit command buffer
+        vk::SubmitInfo info_submit {
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmd,
+        };
+        queues._universal.submit(info_submit);
+        queues._universal.waitIdle();
         
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {
@@ -253,6 +270,8 @@ private:
         // update texture descriptors
         _pipe_smaa_edge_detection.write_descriptor(device, 0, 0, _color);
         _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 0, _smaa_edges);
+        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 1, _smaa_area_tex);
+        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 2, _smaa_search_tex);
         _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _smaa_blend);
     }
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {

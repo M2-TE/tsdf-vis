@@ -14,11 +14,11 @@ layout(location = 1) out vec4 out_offsets[3];
 void main() {
     // oversized triangle
     int id = gl_VertexIndex;
-    out_texcoord.x = id == 1 ? 2.0 : 0.0;
-    out_texcoord.y = id == 2 ? 2.0 : 0.0;
     vec2 position;
     position.x = id == 1 ? 3.0 : -1.0;
     position.y = id == 2 ? 3.0 : -1.0;
     gl_Position = vec4(position, 0.0, 1.0);
-    SMAAEdgeDetectionVS(position, out_offsets);
+    out_texcoord.x = id == 1 ? 2.0 : 0.0;
+    out_texcoord.y = id == 2 ? 2.0 : 0.0;
+    SMAAEdgeDetectionVS(out_texcoord, out_offsets);
 }

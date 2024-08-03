@@ -136,11 +136,11 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
             if (!emplaced) it_node->second++;
 
             // reflect binding
-            fmt::println("\tset {} | binding {}: {} {}", 
-               binding_p->set,
-               binding_p->binding,
-               vk::to_string((vk::DescriptorType)binding_p->descriptor_type), 
-               binding_p->name);
+            // fmt::println("\tset {} | binding {}: {} {}", 
+            //    binding_p->set,
+            //    binding_p->binding,
+            //    vk::to_string((vk::DescriptorType)binding_p->descriptor_type), 
+            //    binding_p->name);
             vk::DescriptorSetLayoutBinding binding {
                 .binding = binding_p->binding,
                 .descriptorType = (vk::DescriptorType)binding_p->descriptor_type,
@@ -168,10 +168,18 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
 					.unnormalizedCoordinates = false,
 				};
 				_immutable_samplers.push_back(device.createSampler(info_sampler));
-				binding.pImmutableSamplers = &_immutable_samplers.back();
+				// write index into binding, as pointers can still be unstable while vector grows
+				binding.pImmutableSamplers = (vk::Sampler*)_immutable_samplers.size();
 			}
             bindings.push_back(binding);
         }
+
+		// turn immutable sampler indices into pointers
+		for (std::size_t i = 0; i < bindings.size(); i++) {
+			if (bindings[i].pImmutableSamplers == nullptr) continue;
+			size_t index = (size_t)bindings[i].pImmutableSamplers;
+			bindings[i].pImmutableSamplers = &_immutable_samplers[index - 1];
+		}
 
         // create set layout from all bindings
 		if (bindings.size() == 0) continue;
