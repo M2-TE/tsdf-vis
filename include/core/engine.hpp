@@ -100,6 +100,7 @@ public:
         _camera.destroy(_vmalloc);
         _renderer.destroy(_device, _vmalloc);
         _swapchain.destroy(_device);
+        _queues.destroy(_device);
         _vmalloc.destroy();
         _device.destroy();
         _window.destroy(_instance);

@@ -192,9 +192,6 @@ private:
         
         // draw cells
         _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
-
-        // apply smaa
-        smaa_execute(cmd);
     }
     
     void smaa_init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
@@ -241,8 +238,7 @@ private:
         _smaa_area_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
 
         // transition smaa textures to their permanent layouts
-        vk::CommandBuffer cmd = _sync_frames[0]._command_buffer;
-        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
+        vk::CommandBuffer cmd = queues.oneshot_begin(device);
         Image::TransitionInfo info_transition {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -251,14 +247,7 @@ private:
         };
         _smaa_search_tex.transition_layout(info_transition);
         _smaa_area_tex.transition_layout(info_transition);
-        cmd.end();
-        // submit command buffer
-        vk::SubmitInfo info_submit {
-            .commandBufferCount = 1,
-            .pCommandBuffers = &cmd,
-        };
-        queues._universal.submit(info_submit);
-        queues._universal.waitIdle();
+        queues.oneshot_end(device, cmd);
         
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {

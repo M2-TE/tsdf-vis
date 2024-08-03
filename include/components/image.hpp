@@ -78,6 +78,8 @@ struct Image {
         _extent = info.extent;
         _aspects = info.aspects;
         _last_layout = vk::ImageLayout::eUndefined;
+        _last_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
+        _last_stage = vk::PipelineStageFlagBits2::eAllCommands;
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         if (_owning) {
