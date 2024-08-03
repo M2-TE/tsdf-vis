@@ -213,19 +213,19 @@ private:
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
+            .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/edge_detection.frag",
         };
         _pipe_smaa_edge_detection.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
+            .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/blend_weight_calc.frag",
         };
         _pipe_smaa_blend_weight_calc.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
+            .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/neigh_blending.frag",
         };
         _pipe_smaa_neigh_blending.init(info_pipeline);
     }
