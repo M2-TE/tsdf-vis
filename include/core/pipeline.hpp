@@ -13,20 +13,34 @@ namespace Pipeline
 			device.destroyPipelineLayout(_pipeline_layout);
 
 			for (auto& layout: _desc_set_layouts) device.destroyDescriptorSetLayout(layout);
+			for (auto& sampler: _immutable_samplers) device.destroySampler(sampler);
 			device.destroyDescriptorPool(_pool);
 			_desc_sets.resize(0);
 			_desc_set_layouts.resize(0);
 		}
 		void write_descriptor(vk::Device device, uint32_t set, uint32_t binding, Image& image) {
+			// vk::DescriptorImageInfo info_image {
+			// 	.imageView = image._view,
+			// 	.imageLayout = vk::ImageLayout::eGeneral,
+			// };
+			// vk::WriteDescriptorSet write_image {
+			// 	.dstSet = _desc_sets[set],
+			// 	.dstBinding = binding,
+			// 	.descriptorCount = 1,
+			// 	.descriptorType = vk::DescriptorType::eStorageImage,
+			// 	.pImageInfo = &info_image,
+			// };
+
+			// set should have an immutable sampler
 			vk::DescriptorImageInfo info_image {
 				.imageView = image._view,
-				.imageLayout = vk::ImageLayout::eGeneral,
+				.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			};
 			vk::WriteDescriptorSet write_image {
 				.dstSet = _desc_sets[set],
 				.dstBinding = binding,
 				.descriptorCount = 1,
-				.descriptorType = vk::DescriptorType::eStorageImage,
+				.descriptorType = vk::DescriptorType::eCombinedImageSampler,
 				.pImageInfo = &info_image,
 			};
 			device.updateDescriptorSets(write_image, {});
@@ -64,6 +78,7 @@ namespace Pipeline
 		vk::DescriptorPool _pool;
 		std::vector<vk::DescriptorSet> _desc_sets;
 		std::vector<vk::DescriptorSetLayout> _desc_set_layouts;
+		std::vector<vk::Sampler> _immutable_samplers;
     };
 	struct Compute: Base {
 		void init(vk::Device device, std::string_view cs_path) {

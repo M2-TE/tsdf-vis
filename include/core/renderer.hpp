@@ -116,7 +116,6 @@ public:
         _pipe_default.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-
         smaa_init(device, vmalloc, extent);
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
@@ -228,6 +227,11 @@ private:
             .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/neigh_blending.frag",
         };
         _pipe_smaa_neigh_blending.init(info_pipeline);
+
+        // update texture descriptors
+        _pipe_smaa_edge_detection.write_descriptor(device, 0, 0, _color);
+        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 0, _smaa_edges);
+        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _smaa_blend);
     }
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
         _smaa_edges.destroy(device, vmalloc);
@@ -239,14 +243,14 @@ private:
     void smaa_execute(vk::CommandBuffer cmd) {
         // SMAA edge detection
         Image::TransitionInfo info_transition;
-        info_transition = {
+        info_transition = { // input
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
         _color.transition_layout(info_transition);
-        info_transition = {
+        info_transition = { // output
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -256,14 +260,14 @@ private:
         _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
 
         // SMAA blending weight calculation
-        info_transition = {
+        info_transition = { // input
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
         _smaa_edges.transition_layout(info_transition);
-        info_transition = {
+        info_transition = { // output
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -273,14 +277,14 @@ private:
         _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
 
         // SMAA neighborhood blending
-        info_transition = {
+        info_transition = { // input
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
         _smaa_blend.transition_layout(info_transition);
-        info_transition = {
+        info_transition = { // output
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,

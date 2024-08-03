@@ -135,7 +135,7 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
             auto [it_node, emplaced] = binding_tally.emplace((vk::DescriptorType)binding_p->descriptor_type, 1);
             if (!emplaced) it_node->second++;
 
-            // // reflect binding
+            // reflect binding
             // fmt::println("\tset {} | binding {}: {} {}", 
             //    binding_p->set,
             //    binding_p->binding,
@@ -146,7 +146,30 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
                 .descriptorType = (vk::DescriptorType)binding_p->descriptor_type,
                 .descriptorCount = binding_p->count,
                 .stageFlags = stage_flags, // todo: combine stages flags if its present in both
+				.pImmutableSamplers = nullptr
             };
+			// optionally create immutable sampler
+			if (binding_p->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+				vk::SamplerCreateInfo info_sampler = {
+					.magFilter = vk::Filter::eLinear,
+					.minFilter = vk::Filter::eLinear,
+					.mipmapMode = vk::SamplerMipmapMode::eLinear,
+					.addressModeU = vk::SamplerAddressMode::eClampToEdge,
+					.addressModeV = vk::SamplerAddressMode::eClampToEdge,
+					.addressModeW = vk::SamplerAddressMode::eClampToEdge,
+					.mipLodBias = 0.0f,
+					.anisotropyEnable = false,
+					.maxAnisotropy = 1.0f,
+					.compareEnable = false,
+					.compareOp = vk::CompareOp::eAlways,
+					.minLod = 0.0f,
+					.maxLod = 0.0f,
+					.borderColor = vk::BorderColor::eFloatOpaqueWhite,
+					.unnormalizedCoordinates = false,
+				};
+				_immutable_samplers.push_back(device.createSampler(info_sampler));
+				binding.pImmutableSamplers = &_immutable_samplers.back();
+			}
             bindings.push_back(binding);
         }
 
