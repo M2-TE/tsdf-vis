@@ -86,6 +86,37 @@ struct Image {
         }
     }
     
+    void load_texture(vma::Allocator vmalloc, std::span<const std::byte> tex_data) {
+        // create image data buffer
+		vk::BufferCreateInfo info_buffer {
+			.size = tex_data.size(),
+			.usage = vk::BufferUsageFlagBits::eVertexBuffer,
+			.sharingMode = vk::SharingMode::eExclusive,
+			.queueFamilyIndexCount = 0,
+			.pQueueFamilyIndices = nullptr,
+		};
+		vma::AllocationCreateInfo info_allocation {
+			.flags =
+				vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
+				vma::AllocationCreateFlagBits::eDedicatedMemory,
+			.usage = 
+                vma::MemoryUsage::eAuto,
+			.requiredFlags =
+				vk::MemoryPropertyFlagBits::eDeviceLocal,
+			.preferredFlags =
+				vk::MemoryPropertyFlagBits::eHostCoherent |
+				vk::MemoryPropertyFlagBits::eHostVisible // ReBAR
+		};
+		auto [staging_buffer, staging_alloc] = vmalloc.createBuffer(info_buffer, info_allocation);
+
+        // upload data
+        void* mapped_data_p = vmalloc.mapMemory(staging_alloc);
+        std::memcpy(mapped_data_p, tex_data.data(), tex_data.size());
+        vmalloc.unmapMemory(staging_alloc);
+        
+        // clean up staging buffer
+        vmalloc.destroyBuffer(staging_buffer, staging_alloc);
+    }
     void transition_layout(TransitionInfo& info) {
         vk::ImageMemoryBarrier2 image_barrier {
             .srcStageMask = _last_stage,

@@ -211,24 +211,42 @@ private:
         };
         _smaa_edges.init(info_image);
         _smaa_blend.init(info_image);
+
+        // load smaa textures
+        info_image = {
+            .device = device, .vmalloc = vmalloc,
+            .format = vk::Format::eR8Unorm,
+            .extent { SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, 1 },
+            .usage = vk::ImageUsageFlagBits::eSampled,
+        };
+        _smaa_search_tex.init(info_image);
+        _smaa_search_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(searchTexBytes), sizeof(searchTexBytes)));
+        info_image = {
+            .device = device, .vmalloc = vmalloc,
+            .format = vk::Format::eR8G8Unorm,
+            .extent { AREATEX_WIDTH, AREATEX_HEIGHT, 1 },
+            .usage = vk::ImageUsageFlagBits::eSampled,
+        };
+        _smaa_area_tex.init(info_image);
+        _smaa_search_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
         
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/edge_detection.frag",
+            .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
         };
         _pipe_smaa_edge_detection.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/blend_weight_calc.frag",
+            .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
         };
         _pipe_smaa_blend_weight_calc.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "defaults/oversized_triangle.vert", .fs_path = "smaa/neigh_blending.frag",
+            .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
         };
         _pipe_smaa_neigh_blending.init(info_pipeline);
 
@@ -240,6 +258,8 @@ private:
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
         _smaa_edges.destroy(device, vmalloc);
         _smaa_blend.destroy(device, vmalloc);
+        _smaa_area_tex.destroy(device, vmalloc);
+        _smaa_search_tex.destroy(device, vmalloc);
         _pipe_smaa_edge_detection.destroy(device);
         _pipe_smaa_blend_weight_calc.destroy(device);
         _pipe_smaa_neigh_blending.destroy(device);
@@ -314,4 +334,6 @@ private:
     Pipeline::Graphics _pipe_smaa_neigh_blending;
     Image _smaa_edges;
     Image _smaa_blend;
+    Image _smaa_area_tex;
+    Image _smaa_search_tex;
 };

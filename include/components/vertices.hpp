@@ -27,9 +27,10 @@ struct Vertices {
 				vk::MemoryPropertyFlagBits::eHostVisible // ReBAR
 		};
 		std::tie(_buffer, _allocation) = vmalloc.createBuffer(info_buffer, info_allocation);
-		void* mapped_data_p = vmalloc.mapMemory(_allocation);
         
 		// check for host coherency and visibility
+		bool _require_staging;
+		bool _require_flushing;
 		vk::MemoryPropertyFlags props = vmalloc.getAllocationMemoryProperties(_allocation);
 		if (props & vk::MemoryPropertyFlagBits::eHostCoherent) _require_flushing = false;
 		else _require_flushing = true;
@@ -37,7 +38,8 @@ struct Vertices {
 		else _require_staging = true;
         
 		// upload data
-		if (_require_staging) fmt::println("ReBAR is recommended and not present");
+		if (_require_staging) fmt::println("ReBAR is recommended but not present");
+		void* mapped_data_p = vmalloc.mapMemory(_allocation);
 		std::memcpy(mapped_data_p, vertex_data.data(), sizeof(Vertex) * vertex_data.size());
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(Vertex) * vertex_data.size());
         vmalloc.unmapMemory(_allocation);
@@ -47,11 +49,7 @@ struct Vertices {
 		vmalloc.destroyBuffer(_buffer, _allocation);
     }
 
-    // cpu
-    uint32_t _vertex_n;
-	bool _require_staging;
-	bool _require_flushing;
-    // gpu
+    uint32_t _vertex_n = 0;
     vk::Buffer _buffer;
 	vma::Allocation _allocation;
 };
