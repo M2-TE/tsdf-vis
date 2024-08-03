@@ -248,21 +248,22 @@ namespace Pipeline
 			info.device.destroyShaderModule(vs_module);
 			info.device.destroyShaderModule(fs_module);
 		}
+		// draw mesh with color and depth attachments
 		template<typename Vertex, typename Index>
-		void execute(vk::CommandBuffer cmd, Image& dst_color, Image& dst_depth, Mesh<Vertex, Index>& mesh, bool clear) {
+		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, Image& color_dst, bool color_clear, Image& depth_dst, bool depth_clear) {
 			vk::RenderingAttachmentInfo info_color_attach {
-				.imageView = dst_color._view,
-				.imageLayout = dst_color._last_layout,
+				.imageView = color_dst._view,
+				.imageLayout = color_dst._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
+				.loadOp = color_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
 			};
 			vk::RenderingAttachmentInfo info_depth_attach {
-				.imageView = dst_depth._view,
+				.imageView = depth_dst._view,
 				.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eDontCare,
+				.loadOp = depth_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue = { .depthStencil = 1.0f },
 			};
@@ -290,6 +291,69 @@ namespace Pipeline
 				cmd.draw(mesh._vertices._vertex_n, 1, 0, 0);
 			}
 			// draw end //
+			cmd.endRendering();
+		}
+		// draw mesh with only color attachment
+		template<typename Vertex, typename Index>
+		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, Image& color_dst, bool color_clear) {
+			vk::RenderingAttachmentInfo info_color_attach {
+				.imageView = color_dst._view,
+				.imageLayout = color_dst._last_layout,
+				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
+				.loadOp = color_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+			};
+			vk::RenderingInfo info_render {
+				.renderArea = _render_area,
+				.layerCount = 1,
+				.colorAttachmentCount = 1,
+				.pColorAttachments = &info_color_attach,
+				.pDepthAttachment = nullptr,
+				.pStencilAttachment = nullptr,
+			};
+			cmd.beginRendering(info_render);
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+			if (_desc_sets.size() > 0) {
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
+			}
+			// draw beg //
+			if (mesh._indices._index_n > 0) {
+				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
+				cmd.bindIndexBuffer(mesh._indices._buffer, 0, mesh._indices.get_type());
+				cmd.drawIndexed(mesh._indices._index_n, 1, 0, 0, 0);
+			}
+			else {
+				cmd.bindVertexBuffers(0, mesh._vertices._buffer, { 0 });
+				cmd.draw(mesh._vertices._vertex_n, 1, 0, 0);
+			}
+			// draw end //
+			cmd.endRendering();
+		}
+		// draw fullscreen mesh using oversized triangle
+		void execute(vk::CommandBuffer cmd, Image& color_dst, bool color_clear) {
+			vk::RenderingAttachmentInfo info_color_attach {
+				.imageView = color_dst._view,
+				.imageLayout = color_dst._last_layout,
+				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
+				.loadOp = color_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+			};
+			vk::RenderingInfo info_render {
+				.renderArea = _render_area,
+				.layerCount = 1,
+				.colorAttachmentCount = 1,
+				.pColorAttachments = &info_color_attach,
+				.pDepthAttachment = nullptr,
+				.pStencilAttachment = nullptr,
+			};
+			cmd.beginRendering(info_render);
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+			if (_desc_sets.size() > 0) {
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
+			}
+			cmd.draw(3, 1, 0, 0);
 			cmd.endRendering();
 		}
 	

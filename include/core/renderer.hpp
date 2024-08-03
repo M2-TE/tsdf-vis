@@ -186,31 +186,16 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _color.transition_layout(info_transition);
-        _pipe_default.execute(cmd, _color, _depth, scene._ply._mesh, true); // clear both color and depth
+        _pipe_default.execute(cmd, scene._ply._mesh, _color, true, _depth, true); // clear both color and depth
 
-        // draw triangles
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        };
-        _color.transition_layout(info_transition);
-        _pipe_scan_points.execute(cmd, _color, _depth, scene._grid._scan_points, false);
+        // draw points
+        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, false, _depth, false);
         
         // draw cells
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
-        };
-        _color.transition_layout(info_transition);
-        _pipe_cells.execute(cmd, _color, _depth, scene._grid._query_points, false);
+        _pipe_cells.execute(cmd, scene._grid._query_points, _color, false, _depth, false);
+
+        // apply smaa
+        // smaa_execute(cmd);
     }
     
     void smaa_init(vk::Device device, vma::Allocator vmalloc, vk::Extent2D extent) {
@@ -246,8 +231,40 @@ private:
         _pipe_smaa_edges.destroy(device);
         _pipe_smaa_blend.destroy(device);
     }
-    void smaa_execute() {
+    void smaa_execute(vk::CommandBuffer cmd) {
+        // edge detection
+        Image::TransitionInfo info_transition;
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentRead,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _smaa_edges.transition_layout(info_transition);
+        _pipe_smaa_edges.execute(cmd, _smaa_edges, true);
 
+        // blending
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+        };
+        _smaa_edges.transition_layout(info_transition);
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentRead,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _smaa_blend.transition_layout(info_transition);
+        _pipe_smaa_weight.execute(cmd, _smaa_edges, true);
     }
 
 private:
@@ -262,6 +279,7 @@ private:
 
     // smaa:
     Pipeline::Graphics _pipe_smaa_edges;
+    Pipeline::Graphics _pipe_smaa_weight;
     Pipeline::Graphics _pipe_smaa_blend;
     Image _smaa_edges;
     Image _smaa_blend;
