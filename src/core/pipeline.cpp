@@ -13,13 +13,13 @@ CMRC_DECLARE(shaders);
 auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
     -> std::vector<SpvReflectDescriptorSet*>
 {
-	// enumerate desc sets
-	uint32_t refl_desc_sets_n;
 	SpvReflectResult result;
-	std::vector<SpvReflectDescriptorSet*> refl_desc_sets;
+	// get number of descriptor sets
+	uint32_t refl_desc_sets_n;
 	result = reflection.EnumerateEntryPointDescriptorSets("main", &refl_desc_sets_n, nullptr);
 	if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
-	refl_desc_sets.resize(refl_desc_sets_n);
+	std::vector<SpvReflectDescriptorSet*> refl_desc_sets(refl_desc_sets_n);
+	// fill vector with reflected descriptor sets
 	result = reflection.EnumerateEntryPointDescriptorSets("main", &refl_desc_sets_n, refl_desc_sets.data());
 	if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
 	return refl_desc_sets;
@@ -136,11 +136,11 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
             if (!emplaced) it_node->second++;
 
             // reflect binding
-            // fmt::println("\tset {} | binding {}: {} {}", 
-            //    binding_p->set,
-            //    binding_p->binding,
-            //    vk::to_string((vk::DescriptorType)binding_p->descriptor_type), 
-            //    binding_p->name);
+            fmt::println("\tset {} | binding {}: {} {}", 
+               binding_p->set,
+               binding_p->binding,
+               vk::to_string((vk::DescriptorType)binding_p->descriptor_type), 
+               binding_p->name);
             vk::DescriptorSetLayoutBinding binding {
                 .binding = binding_p->binding,
                 .descriptorType = (vk::DescriptorType)binding_p->descriptor_type,

@@ -228,7 +228,7 @@ private:
             .usage = vk::ImageUsageFlagBits::eSampled,
         };
         _smaa_area_tex.init(info_image);
-        _smaa_search_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
+        _smaa_area_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
         
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {
