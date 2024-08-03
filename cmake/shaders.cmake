@@ -33,20 +33,30 @@ set(BUILD_EXTERNAL OFF)
 FetchContent_Declare(glslang GIT_REPOSITORY "https://github.com/KhronosGroup/glslang.git" GIT_TAG "vulkan-sdk-1.3.290.0" GIT_SHALLOW ON)
 FetchContent_MakeAvailable(glslang)
 
+# SMAA for anti-aliasing
+FetchContent_Declare(smaa GIT_REPOSITORY "https://github.com/iryoku/smaa.git" GIT_TAG "master" GIT_SHALLOW ON)
+FetchContent_MakeAvailable(smaa)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE "${smaa_SOURCE_DIR}/Textures")
+
 # compile glsl to spirv and add as library
-file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders/")
-file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.comp")
 foreach(GLSL_FILE ${GLSL_SOURCE_FILES})
     file(RELATIVE_PATH FILE_NAME "${CMAKE_CURRENT_SOURCE_DIR}/shaders" "${GLSL_FILE}")
     set(SPIRV_FILE "${CMAKE_CURRENT_BINARY_DIR}/shaders/${FILE_NAME}")
     add_custom_command(
         COMMENT "Compiling shader: ${FILE_NAME}"
         OUTPUT  "${SPIRV_FILE}"
-        COMMAND glslang-standalone --enhanced-msgs -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
+        COMMAND glslang-standalone --enhanced-msgs -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
         DEPENDS "${GLSL_FILE}" glslang-standalone)
     list(APPEND SPIRV_BINARY_FILES "${SPIRV_FILE}")
 endforeach(GLSL_FILE)
+
+# embed shaders into executable
 FetchContent_Declare(cmrc GIT_REPOSITORY "https://github.com/vector-of-bool/cmrc.git" GIT_TAG "2.0.1" GIT_SHALLOW ON)
 FetchContent_MakeAvailable(cmrc)
-cmrc_add_resource_library(shaders ALIAS cmrc::shaders WHENCE "${CMAKE_CURRENT_BINARY_DIR}/shaders/" "${SPIRV_BINARY_FILES}")
+cmrc_add_resource_library(shaders ALIAS cmrc::shaders WHENCE "${CMAKE_CURRENT_BINARY_DIR}/shaders" "${SPIRV_BINARY_FILES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE cmrc::shaders)

@@ -10,6 +10,10 @@
 #include "components/camera.hpp"
 #include "components/scene.hpp"
 
+// temporary stuff for SMAA
+#include "AreaTex.h"
+#include "SearchTex.h"
+
 class Renderer {
     // move this and swapchain thingy to its own header
     struct SyncFrame {

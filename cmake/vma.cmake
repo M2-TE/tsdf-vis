@@ -2,8 +2,8 @@ FetchContent_Declare(vma GIT_REPOSITORY "https://github.com/GPUOpen-LibrariesAnd
 FetchContent_Declare(vma_hpp GIT_REPOSITORY "https://github.com/YaaZ/VulkanMemoryAllocator-Hpp.git" GIT_TAG "v3.1.0" GIT_SHALLOW ON GIT_SUBMODULES "" SOURCE_SUBDIR "disabled/")
 FetchContent_MakeAvailable(vma vma_hpp)
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-    "${vma_SOURCE_DIR}/include/"
-	"${vma_hpp_SOURCE_DIR}/include/")
+    "${vma_SOURCE_DIR}/include"
+	"${vma_hpp_SOURCE_DIR}/include")
 target_compile_definitions(${PROJECT_NAME} PRIVATE 
     "VMA_DYNAMIC_VULKAN_FUNCTIONS" 
 	"VMA_STATIC_VULKAN_FUNCTIONS=0")
