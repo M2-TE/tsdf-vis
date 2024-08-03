@@ -68,7 +68,7 @@ public:
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eTransferSrc | 
-                vk::ImageUsageFlagBits::eStorage
+                vk::ImageUsageFlagBits::eSampled
         };
         _color.init(info_image);
 
@@ -129,7 +129,7 @@ public:
         smaa_destroy(device, vmalloc);
     }
     
-    void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) { // todo: proper resize
+    void resize(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) {
         destroy(device, vmalloc);
         init(device, vmalloc, queues, extent, camera);
     }
@@ -186,16 +186,16 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _color.transition_layout(info_transition);
-        _pipe_default.execute(cmd, scene._ply._mesh, _color, true, _depth, true); // clear both color and depth
+        _pipe_default.execute(cmd, scene._ply._mesh, _color, vk::AttachmentLoadOp::eClear, _depth, vk::AttachmentLoadOp::eClear);
 
         // draw points
-        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, false, _depth, false);
+        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
         
         // draw cells
-        _pipe_cells.execute(cmd, scene._grid._query_points, _color, false, _depth, false);
+        _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
 
         // apply smaa
-        // smaa_execute(cmd);
+        smaa_execute(cmd);
     }
     
     void smaa_init(vk::Device device, vma::Allocator vmalloc, vk::Extent2D extent) {
@@ -217,23 +217,39 @@ private:
             .cull_mode = vk::CullModeFlagBits::eNone,
             .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
         };
-        _pipe_smaa_edges.init(info_pipeline);
+        _pipe_smaa_edge_detection.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .vs_path = "smaa/blending_calc.vert", .fs_path = "smaa/blending_calc.frag",
+            .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
         };
-        _pipe_smaa_blend.init(info_pipeline);
+        _pipe_smaa_blend_weight_calc.init(info_pipeline);
+        info_pipeline = {
+            .device = device, .extent = extent,
+            .cull_mode = vk::CullModeFlagBits::eNone,
+            .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
+        };
+        _pipe_smaa_neigh_blending.init(info_pipeline);
     }
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
         _smaa_edges.destroy(device, vmalloc);
         _smaa_blend.destroy(device, vmalloc);
-        _pipe_smaa_edges.destroy(device);
-        _pipe_smaa_blend.destroy(device);
+        _pipe_smaa_edge_detection.destroy(device);
+        _pipe_smaa_blend_weight_calc.destroy(device);
+        _pipe_smaa_neigh_blending.destroy(device);
     }
     void smaa_execute(vk::CommandBuffer cmd) {
-        // edge detection
+        // SMAA edge detection
         Image::TransitionInfo info_transition;
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+        };
+        _color.transition_layout(info_transition);
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
@@ -243,9 +259,9 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _smaa_edges.transition_layout(info_transition);
-        _pipe_smaa_edges.execute(cmd, _smaa_edges, true);
+        _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
 
-        // blending
+        // SMAA blending weight calculation
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -264,7 +280,28 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _smaa_blend.transition_layout(info_transition);
-        _pipe_smaa_weight.execute(cmd, _smaa_edges, true);
+        _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
+
+        // SMAA neighborhood blending
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentWrite,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+        };
+        _smaa_blend.transition_layout(info_transition);
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .src_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .src_access = vk::AccessFlagBits2::eColorAttachmentRead,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _color.transition_layout(info_transition);
+        _pipe_smaa_neigh_blending.execute(cmd, _color, vk::AttachmentLoadOp::eDontCare);
     }
 
 private:
@@ -278,9 +315,9 @@ private:
     Pipeline::Graphics _pipe_cells;
 
     // smaa:
-    Pipeline::Graphics _pipe_smaa_edges;
-    Pipeline::Graphics _pipe_smaa_weight;
-    Pipeline::Graphics _pipe_smaa_blend;
+    Pipeline::Graphics _pipe_smaa_edge_detection;
+    Pipeline::Graphics _pipe_smaa_blend_weight_calc;
+    Pipeline::Graphics _pipe_smaa_neigh_blending;
     Image _smaa_edges;
     Image _smaa_blend;
 };

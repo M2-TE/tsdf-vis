@@ -248,14 +248,18 @@ namespace Pipeline
 			info.device.destroyShaderModule(vs_module);
 			info.device.destroyShaderModule(fs_module);
 		}
+		
 		// draw mesh with color and depth attachments
 		template<typename Vertex, typename Index>
-		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, Image& color_dst, bool color_clear, Image& depth_dst, bool depth_clear) {
+		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, 
+			Image& color_dst, vk::AttachmentLoadOp color_load, 
+			Image& depth_dst, vk::AttachmentLoadOp depth_load)
+		{
 			vk::RenderingAttachmentInfo info_color_attach {
 				.imageView = color_dst._view,
 				.imageLayout = color_dst._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = color_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
 			};
@@ -263,7 +267,7 @@ namespace Pipeline
 				.imageView = depth_dst._view,
 				.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = depth_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+				.loadOp = depth_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue = { .depthStencil = 1.0f },
 			};
@@ -293,14 +297,17 @@ namespace Pipeline
 			// draw end //
 			cmd.endRendering();
 		}
+		
 		// draw mesh with only color attachment
 		template<typename Vertex, typename Index>
-		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, Image& color_dst, bool color_clear) {
+		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, 
+			Image& color_dst,  vk::AttachmentLoadOp color_load)
+		{
 			vk::RenderingAttachmentInfo info_color_attach {
 				.imageView = color_dst._view,
 				.imageLayout = color_dst._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = color_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
 			};
@@ -330,13 +337,16 @@ namespace Pipeline
 			// draw end //
 			cmd.endRendering();
 		}
+		
 		// draw fullscreen mesh using oversized triangle
-		void execute(vk::CommandBuffer cmd, Image& color_dst, bool color_clear) {
+		void execute(vk::CommandBuffer cmd,
+			Image& color_dst,  vk::AttachmentLoadOp color_load)
+		{
 			vk::RenderingAttachmentInfo info_color_attach {
 				.imageView = color_dst._view,
 				.imageLayout = color_dst._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = color_clear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad,
+				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
 			};
