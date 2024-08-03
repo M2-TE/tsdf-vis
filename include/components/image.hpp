@@ -105,7 +105,7 @@ struct Image {
 				vk::MemoryPropertyFlagBits::eDeviceLocal,
 			.preferredFlags =
 				vk::MemoryPropertyFlagBits::eHostCoherent |
-				vk::MemoryPropertyFlagBits::eHostVisible // ReBAR
+				vk::MemoryPropertyFlagBits::eHostVisible
 		};
 		auto [staging_buffer, staging_alloc] = vmalloc.createBuffer(info_buffer, info_allocation);
 
@@ -114,7 +114,7 @@ struct Image {
         std::memcpy(mapped_data_p, tex_data.data(), tex_data.size());
         vmalloc.unmapMemory(staging_alloc);
 
-        // copy data to image
+        // copy staging buffer data to image
         // TODO
         
         // clean up staging buffer

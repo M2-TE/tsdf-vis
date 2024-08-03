@@ -19,7 +19,6 @@ class Renderer {
     struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_pool {
-                .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
                 .queueFamilyIndex = queues._universal_i,
             };
             _command_pool = device.createCommandPool(info_pool);
@@ -150,9 +149,11 @@ public:
         frame.reset_semaphore(device);
         
         // record command buffer
+        device.resetCommandPool(frame._command_pool, {});
         vk::CommandBuffer cmd = frame._command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         execute_pipes(device, cmd, scene);
+        if (_smaa_enabled) smaa_execute(cmd);
         cmd.end();
         
         // submit command buffer
@@ -170,7 +171,7 @@ public:
         queues._universal.submit(info_submit);
 
         // present drawn image
-        swapchain.present(device, _smaa_output, frame._timeline, frame._timeline_val);
+        swapchain.present(device, _smaa_enabled ? _smaa_output : _color, frame._timeline, frame._timeline_val);
     }
     
 private:
@@ -367,7 +368,8 @@ private:
     Pipeline::Graphics _pipe_smaa_neigh_blending;
     Image _smaa_search_tex; // constant
     Image _smaa_area_tex; // constant
-    Image _smaa_edges; // todo: reduce to 8/16 bits
-    Image _smaa_blend;
-    Image _smaa_output;
+    Image _smaa_edges; // intermediate SMAA output // todo: reduce to 1/2 channels
+    Image _smaa_blend; // intermediate SMAA output
+    Image _smaa_output; // final SMAA output
+    bool _smaa_enabled = false;
 };
