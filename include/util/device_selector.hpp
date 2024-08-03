@@ -64,7 +64,7 @@ struct DeviceSelector {
         typedef std::tuple<vk::PhysicalDevice, bool, vk::DeviceSize> DeviceEntry;
         auto fnc_sorter = [&](DeviceEntry& a, DeviceEntry& b) {
             // favor gpu if a is a preferred type and b is not
-            if (std::get<1>(a) < std::get<1>(b)) return false;
+            if (std::get<1>(a) && !std::get<1>(b)) return true;
             // else compare total local memory of all heaps
             else return std::get<2>(a) > std::get<2>(b);
         };

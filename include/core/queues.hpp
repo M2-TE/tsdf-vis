@@ -12,6 +12,7 @@ struct Queues {
         _compute = device.getQueue(_compute_i, 0);
         _transfer = device.getQueue(_transfer_i, 0);
     }
+    // TODO: allow oneshot command buffer on queues
     
     // queue handle
     vk::Queue _universal, _graphics, _compute, _transfer;

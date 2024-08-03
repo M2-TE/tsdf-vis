@@ -27,9 +27,10 @@ public:
         DeviceSelector device_selector {
             ._required_major = 1,
             ._required_minor = 3,
-            ._preferred_device_type = vk::PhysicalDeviceType::eIntegratedGpu,
+            ._preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu,
             ._required_extensions {
                 vk::KHRSwapchainExtensionName,
+                // vk::KHRDynamicRenderingLocalReadExtensionName,
             },
             ._required_features {
                 .fillModeNonSolid = true,

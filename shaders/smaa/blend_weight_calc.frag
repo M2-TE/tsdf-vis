@@ -18,5 +18,5 @@ layout(binding = 2) uniform sampler2D tex_search;
 
 void main() {
     out_blend = SMAABlendingWeightCalculationPS(in_texcoord, in_pixcoord, in_offsets, tex_edges, tex_area, tex_search, vec4(0, 0, 0, 0));
-    // out_blend = texelFetch(tex_edges, ivec2(gl_FragCoord.xy), 0);
+    // out_blend = texture(tex_edges, in_texcoord);
 }
