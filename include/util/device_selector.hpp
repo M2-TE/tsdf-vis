@@ -81,6 +81,34 @@ struct DeviceSelector {
         };
         _required_vk11_features.pNext = &_required_vk12_features;
         _required_vk12_features.pNext = &_required_vk13_features;
+        void** chain_tail_pp = &_required_vk13_features.pNext;
+
+        // in case some of these are requested and available
+        vk::PhysicalDeviceMemoryPriorityFeaturesEXT memory_priority {
+            .memoryPriority = true
+        };
+        vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageable_memory {
+            .pageableDeviceLocalMemory = true,
+        };
+
+        // enable optional features if available
+        auto available_extensions = physical_device.enumerateDeviceExtensionProperties();
+        for (const char* ext: _optional_extensions) {
+            for (auto& available: available_extensions) {
+                if (strcmp(ext, available.extensionName) == 0) {
+                    _required_extensions.push_back(ext);
+                    if (strcmp(ext, vk::EXTMemoryPriorityExtensionName) == 0) {
+                        *chain_tail_pp = &memory_priority;
+                        chain_tail_pp = &memory_priority.pNext;
+                    }
+                    if (strcmp(ext, vk::EXTPageableDeviceLocalMemoryExtensionName) == 0) {
+                        *chain_tail_pp = &pageable_memory;
+                        chain_tail_pp = &pageable_memory.pNext;
+                    }
+                    break;
+                }
+            }
+        }
         
         // create device
         auto [info_queues, queue_mappings] = create_queue_infos(physical_device);
@@ -186,6 +214,7 @@ public:
     uint32_t _required_minor = 0;
     vk::PhysicalDeviceType _preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
     std::vector<const char*> _required_extensions;
+    std::vector<const char*> _optional_extensions;
     vk::PhysicalDeviceFeatures _required_features;
     vk::PhysicalDeviceVulkan11Features _required_vk11_features;
     vk::PhysicalDeviceVulkan12Features _required_vk12_features;

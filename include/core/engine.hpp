@@ -32,6 +32,10 @@ public:
                 vk::KHRSwapchainExtensionName,
                 // vk::KHRDynamicRenderingLocalReadExtensionName,
             },
+            ._optional_extensions {
+                vk::EXTMemoryPriorityExtensionName,
+                vk::EXTPageableDeviceLocalMemoryExtensionName,
+            },
             ._required_features {
                 .fillModeNonSolid = true,
                 .wideLines = true,
@@ -66,8 +70,14 @@ public:
             .vkGetInstanceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
             .vkGetDeviceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr,
         };
+        vma::AllocatorCreateFlags vma_flags = vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation;
+        for (const char* ext: device_selector._required_extensions) {
+            if (std::strcmp(ext, vk::EXTMemoryPriorityExtensionName) == 0) {
+                vma_flags |= vma::AllocatorCreateFlagBits::eExtMemoryPriority;
+            }
+        }
         vma::AllocatorCreateInfo info_vmalloc {
-            .flags = vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
+            .flags = vma_flags,
             .physicalDevice = _phys_device,
             .device = _device,
             .pVulkanFunctions = &vk_funcs,
@@ -75,6 +85,7 @@ public:
             .vulkanApiVersion = vk::ApiVersion13,
         };
         _vmalloc = vma::createAllocator(info_vmalloc);
+
         
         // create renderer components
         _queues.init(_device, queue_mappings);

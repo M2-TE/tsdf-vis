@@ -75,10 +75,10 @@ public:
         };
         _color.init(info_image);
 
-        // create depth image without stencil
+        // create depth stencil image
         info_image = {
             .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eD32Sfloat,
+            .format = vk::Format::eD24UnormS8Uint,
             .extent { extent.width, extent.height, 1 },
             .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
             .aspects = vk::ImageAspectFlagBits::eDepth

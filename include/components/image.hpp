@@ -11,6 +11,7 @@ struct Image {
         vk::Extent3D extent;
         vk::ImageUsageFlags usage;
         vk::ImageAspectFlags aspects = vk::ImageAspectFlagBits::eColor;
+        float priority = 0.5f;
     };
     struct WrapInfo {
         vk::Image image;
@@ -45,9 +46,9 @@ struct Image {
             .usage = info.usage,
         };
         vma::AllocationCreateInfo info_alloc {
-            .flags = vma::AllocationCreateFlagBits::eDedicatedMemory,
             .usage = vma::MemoryUsage::eAutoPreferDevice,
             .requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+            .priority = info.priority,
         };
         std::tie(_image, _allocation) = info.vmalloc.createImage(info_image, info_alloc);
         

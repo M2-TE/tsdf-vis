@@ -39,7 +39,7 @@ auto Pipeline::Base::compile(vk::Device device, std::string_view path)
     };
 	return device.createShaderModule(info_shader);
 }
-auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shader_paths) 
+auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shader_paths)
     -> std::pair< vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>
 {
 	// read raw shader sources
@@ -163,7 +163,7 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
 					.compareEnable = false,
 					.compareOp = vk::CompareOp::eAlways,
 					.minLod = 0.0f,
-					.maxLod = 0.0f,
+					.maxLod = vk::LodClampNone,
 					.borderColor = vk::BorderColor::eFloatOpaqueWhite,
 					.unnormalizedCoordinates = false,
 				};

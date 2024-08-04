@@ -21,13 +21,14 @@ struct Camera {
 		};
 		vma::AllocationCreateInfo info_allocation {
 			.flags = 
-				vma::AllocationCreateFlagBits::eHostAccessSequentialWrite,
+				vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
+				vma::AllocationCreateFlagBits::eMapped,
 			.usage = vma::MemoryUsage::eAutoPreferDevice,
 			.requiredFlags = 
 				vk::MemoryPropertyFlagBits::eDeviceLocal,
 			.preferredFlags = 
 				vk::MemoryPropertyFlagBits::eHostCoherent |
-				vk::MemoryPropertyFlagBits::eHostVisible // ReBAR
+				vk::MemoryPropertyFlagBits::eHostVisible, // ReBAR
 		};
 		std::tie(_buffer, _allocation) = vmalloc.createBuffer(info_buffer, info_allocation);
 		_mapped_data_p = vmalloc.mapMemory(_allocation);

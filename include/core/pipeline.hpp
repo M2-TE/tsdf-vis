@@ -238,8 +238,8 @@ namespace Pipeline
 			vk::PipelineRenderingCreateInfo renderInfo {
 				.colorAttachmentCount = 1,
 				.pColorAttachmentFormats = &outputFormat,
-				.depthAttachmentFormat = vk::Format::eD32Sfloat,
-				.stencilAttachmentFormat = vk::Format::eUndefined,
+				.depthAttachmentFormat = vk::Format::eD24UnormS8Uint,
+				.stencilAttachmentFormat = vk::Format::eD24UnormS8Uint,
 			};
 			vk::GraphicsPipelineCreateInfo pipeInfo {
 				.pNext = &renderInfo,
