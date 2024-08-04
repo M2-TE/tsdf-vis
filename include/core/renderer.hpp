@@ -71,7 +71,7 @@ public:
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eTransferSrc | 
-                vk::ImageUsageFlagBits::eSampled
+                vk::ImageUsageFlagBits::eSampled,
         };
         _color.init(info_image);
 
@@ -81,7 +81,7 @@ public:
             .format = vk::Format::eD24UnormS8Uint,
             .extent { extent.width, extent.height, 1 },
             .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            .aspects = vk::ImageAspectFlagBits::eDepth
+            .aspects = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
         };
         _depth.init(info_image);
 
@@ -215,7 +215,7 @@ private:
             .extent { extent.width, extent.height, 1 },
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment | 
-                vk::ImageUsageFlagBits::eSampled
+                vk::ImageUsageFlagBits::eSampled,
         };
         _smaa_edges.init(info_image);
         _smaa_blend.init(info_image);

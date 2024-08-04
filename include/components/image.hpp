@@ -43,7 +43,7 @@ struct Image {
             .arrayLayers = 1,
             .samples = vk::SampleCountFlagBits::e1,
             .tiling = vk::ImageTiling::eOptimal,
-            .usage = info.usage,
+            .usage = info.usage
         };
         vma::AllocationCreateInfo info_alloc {
             .usage = vma::MemoryUsage::eAutoPreferDevice,

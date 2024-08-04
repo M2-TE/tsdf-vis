@@ -31,4 +31,5 @@ khronos_validation.syncval_shader_accesses_heuristic = true
 khronos_validation.gpuav_select_instrumented_shaders = true
 khronos_validation.gpuav_debug_validate_instrumented_shaders = true
 # etc:
-khronos_validation.report_flags = info,warn,error,perf")
+khronos_validation.report_flags = info,warn,error")
+# khronos_validation.report_flags = info,warn,error,perf")
