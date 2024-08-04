@@ -9,7 +9,6 @@ class Swapchain {
     struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
             vk::CommandPoolCreateInfo info_command_pool {
-                .flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
                 .queueFamilyIndex = queues._universal_i,
             };
             _command_pool = device.createCommandPool(info_command_pool);
@@ -66,10 +65,15 @@ public:
             }
         }
 
+        uint32_t swapchain_image_count = capabilities.minImageCount + 1;
+        if (capabilities.maxImageCount > 0 && swapchain_image_count > capabilities.maxImageCount) {
+            swapchain_image_count = capabilities.maxImageCount;
+        }
+
         // create swapchain
         vk::SwapchainCreateInfoKHR info_swapchain {
             .surface = window._surface,
-            .minImageCount = capabilities.minImageCount + 1,
+            .minImageCount = swapchain_image_count,
             .imageFormat = _format,
             .imageColorSpace = color_space,
             .imageExtent = window.size(),
@@ -122,19 +126,17 @@ public:
         SyncFrame& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
         while (vk::Result::eTimeout == device.waitForFences(frame._fence_present, vk::True, UINT64_MAX));
         device.resetFences(frame._fence_present);
-        
+
         // acquire image from swapchain
         uint32_t swap_index;
-        for (vk::Result result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
+        for (auto result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
             std::tie(result, swap_index) = device.acquireNextImageKHR(_swapchain, UINT64_MAX, frame._sema_swap_acquire);
         }
         
         // restart command buffer
+        device.resetCommandPool(frame._command_pool);
         vk::CommandBuffer cmd = frame._command_buffer;
-        vk::CommandBufferBeginInfo info_cmd_begin {
-            .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
-        };
-        cmd.begin(info_cmd_begin);
+        cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         draw_imgui(cmd, src_image);
         draw_swapchain(cmd, src_image, swap_index);
         cmd.end();
@@ -190,9 +192,9 @@ private:
     void draw_imgui(vk::CommandBuffer cmd, Image& dst_image) {
         Image::TransitionInfo info_transition {
             .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .new_layout = vk::ImageLayout::eColorAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
         };
         dst_image.transition_layout(info_transition);
         ImGui::impl::draw(cmd, dst_image._view, info_transition.new_layout, _extent);

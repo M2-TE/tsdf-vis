@@ -45,7 +45,7 @@ class Renderer {
         void reset_semaphore(vk::Device device) {
             vk::SemaphoreTypeCreateInfo info_sema_type {
                 .semaphoreType = vk::SemaphoreType::eTimeline,
-                .initialValue = 0,  
+                .initialValue = 0,
             };
             vk::SemaphoreCreateInfo info_sema { .pNext = &info_sema_type };
             device.destroySemaphore(_timeline);
