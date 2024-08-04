@@ -100,7 +100,9 @@ struct Image {
 			.pQueueFamilyIndices = &queues._universal_i,
 		};
 		vma::AllocationCreateInfo info_allocation {
-			.flags = vma::AllocationCreateFlagBits::eHostAccessSequentialWrite,
+			.flags = 
+                vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
+                vma::AllocationCreateFlagBits::eMapped,
 			.usage = 
                 vma::MemoryUsage::eAuto,
 			.requiredFlags =
@@ -136,7 +138,7 @@ struct Image {
                 .baseArrayLayer = 0,
                 .layerCount = 1,
             },
-            .imageOffset = vk::Offset3D(),
+            .imageOffset = vk::Offset3D(0, 0, 0),
             .imageExtent = _extent,
         };
         vk::CopyBufferToImageInfo2 info_copy {
