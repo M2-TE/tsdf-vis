@@ -15,8 +15,9 @@ namespace Pipeline
 			for (auto& layout: _desc_set_layouts) device.destroyDescriptorSetLayout(layout);
 			for (auto& sampler: _immutable_samplers) device.destroySampler(sampler);
 			device.destroyDescriptorPool(_pool);
-			_desc_sets.resize(0);
-			_desc_set_layouts.resize(0);
+			_desc_sets.clear();
+			_desc_set_layouts.clear();
+			_immutable_samplers.clear();
 		}
 		void write_descriptor(vk::Device device, uint32_t set, uint32_t binding, Image& image) {
 			// vk::DescriptorImageInfo info_image {

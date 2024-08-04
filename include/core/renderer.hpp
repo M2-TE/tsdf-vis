@@ -171,7 +171,8 @@ public:
         queues._universal.submit(info_submit);
 
         // present drawn image
-        swapchain.present(device, _smaa_enabled ? _smaa_output : _color, frame._timeline, frame._timeline_val);
+        Image& output_image = _smaa_enabled ? _smaa_output : _color;
+        swapchain.present(device, output_image, frame._timeline, frame._timeline_val);
     }
     
 private:
