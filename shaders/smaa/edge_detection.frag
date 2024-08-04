@@ -12,5 +12,5 @@ layout(binding = 0) uniform sampler2D tex_color;
 void main() {
     // vec2 edge = SMAALumaEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
     vec2 edges = SMAAColorEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
-    out_edges = vec4(edges, 0.0, 0.0); // TODO: reduce output texture to 2 channels
+    out_edges = vec4(edges, 0.0, 0.0); // TODO: reduce to 2 channels
 }

@@ -11,5 +11,7 @@ layout(binding = 0) uniform sampler2D tex_color;
 layout(binding = 1) uniform sampler2D tex_blend;
 
 void main() {
-    out_color = SMAANeighborhoodBlendingPS(in_texcoord, in_offset, tex_color, tex_blend);
+    out_color = SMAANeighborhoodBlendingPS(
+        in_texcoord, in_offset, 
+        tex_color, tex_blend);
 }

@@ -294,7 +294,7 @@ private:
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eShaderRead
+            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
         };
         _color.transition_layout(info_transition);
         info_transition = { // output
@@ -311,7 +311,7 @@ private:
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
         };
         _smaa_edges.transition_layout(info_transition);
         info_transition = { // output
@@ -328,7 +328,7 @@ private:
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
         };
         _smaa_blend.transition_layout(info_transition);
         info_transition = { // output
