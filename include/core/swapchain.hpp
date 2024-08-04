@@ -137,8 +137,16 @@ public:
         device.resetCommandPool(frame._command_pool);
         vk::CommandBuffer cmd = frame._command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        draw_imgui(cmd, src_image);
+        // draw_imgui(cmd, src_image);
         draw_swapchain(cmd, src_image, swap_index);
+        // transition swapchain image into presentation layout
+        Image::TransitionInfo info_transition {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::ePresentSrcKHR,
+            .dst_stage = vk::PipelineStageFlagBits2::eBottomOfPipe,
+            .dst_access = vk::AccessFlagBits2::eNone,
+        };
+        _images[swap_index].transition_layout(info_transition);
         cmd.end();
         
         // submit command buffer to graphics queue
@@ -146,22 +154,22 @@ public:
             vk::SemaphoreSubmitInfo {
                 .semaphore = timeline,
                 .value = timeline_val++,
-                .stageMask = vk::PipelineStageFlagBits2::eAllCommands,
+                .stageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
             },
             vk::SemaphoreSubmitInfo {
                 .semaphore = frame._sema_swap_acquire,
-                .stageMask = vk::PipelineStageFlagBits2::eAllCommands,  
+                .stageMask = vk::PipelineStageFlagBits2::eTopOfPipe,  
             },
         };
         std::array<vk::SemaphoreSubmitInfo, 2> infos_signal {
             vk::SemaphoreSubmitInfo {
                 .semaphore = timeline,
                 .value = timeline_val,
-                .stageMask = vk::PipelineStageFlagBits2::eAllCommands,
+                .stageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
             },
             vk::SemaphoreSubmitInfo {
                 .semaphore = frame._sema_swap_write,
-                .stageMask = vk::PipelineStageFlagBits2::eAllCommands,  
+                .stageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,  
             },
         };
         vk::CommandBufferSubmitInfo info_cmd_submit { .commandBuffer = cmd };
@@ -200,33 +208,22 @@ private:
         ImGui::impl::draw(cmd, dst_image._view, info_transition.new_layout, _extent);
     }
     void draw_swapchain(vk::CommandBuffer cmd, Image& src_image, uint32_t swap_index) {
-        // transition source image layout for upcoming blit
+        // perform blit from source to swapchain image
         Image::TransitionInfo info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eTransferSrcOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eBlit,
-            .dst_access = vk::AccessFlagBits2::eMemoryRead,
+            .dst_access = vk::AccessFlagBits2::eTransferRead,
         };
         src_image.transition_layout(info_transition);
-        // transition swapchain image layout for upcoming blit
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eTransferDstOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eBlit,
-            .dst_access = vk::AccessFlagBits2::eMemoryWrite,
+            .dst_access = vk::AccessFlagBits2::eTransferWrite,
         };
         _images[swap_index].transition_layout(info_transition);
-        // perform blit from source to swapchain image
         _images[swap_index].blit(cmd, src_image);
-
-        // transition swapchain image into presentation layout
-        info_transition = {
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::ePresentSrcKHR,
-            .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
-            .dst_access = vk::AccessFlagBits2::eMemoryRead,
-        };
-        _images[swap_index].transition_layout(info_transition);
     }
 
 public:

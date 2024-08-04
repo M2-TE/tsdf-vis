@@ -21,7 +21,7 @@ struct Image {
     struct TransitionInfo {
         vk::CommandBuffer cmd;
         vk::ImageLayout new_layout;
-        vk::PipelineStageFlags2 dst_stage = vk::PipelineStageFlagBits2::eAllCommands;
+        vk::PipelineStageFlags2 dst_stage = vk::PipelineStageFlagBits2::eTopOfPipe;
         vk::AccessFlags2 dst_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
     };
     
@@ -32,7 +32,7 @@ struct Image {
         _aspects = info.aspects;
         _last_layout = vk::ImageLayout::eUndefined;
         _last_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
-        _last_stage = vk::PipelineStageFlagBits2::eAllCommands;
+        _last_stage = vk::PipelineStageFlagBits2::eTopOfPipe;
         // create image
         vk::ImageCreateInfo info_image {
             .imageType = vk::ImageType::e2D,
@@ -80,7 +80,7 @@ struct Image {
         _aspects = info.aspects;
         _last_layout = vk::ImageLayout::eUndefined;
         _last_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
-        _last_stage = vk::PipelineStageFlagBits2::eAllCommands;
+        _last_stage = vk::PipelineStageFlagBits2::eTopOfPipe;
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         if (_owning) {
@@ -99,9 +99,7 @@ struct Image {
 			.pQueueFamilyIndices = &queues._universal_i,
 		};
 		vma::AllocationCreateInfo info_allocation {
-			.flags =
-				vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
-				vma::AllocationCreateFlagBits::eDedicatedMemory,
+			.flags = vma::AllocationCreateFlagBits::eHostAccessSequentialWrite,
 			.usage = 
                 vma::MemoryUsage::eAuto,
 			.requiredFlags =
@@ -122,7 +120,7 @@ struct Image {
         TransitionInfo info_transition {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eTransferDstOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .dst_stage = vk::PipelineStageFlagBits2::eTransfer,
             .dst_access = vk::AccessFlagBits2::eTransferWrite
         };
         transition_layout(info_transition);

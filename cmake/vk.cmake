@@ -29,4 +29,6 @@ khronos_validation.validate_best_practices_nvidia = true
 khronos_validation.validate_sync = true
 khronos_validation.syncval_shader_accesses_heuristic = true
 khronos_validation.gpuav_select_instrumented_shaders = true
-khronos_validation.gpuav_debug_validate_instrumented_shaders = true")
+khronos_validation.gpuav_debug_validate_instrumented_shaders = true
+# etc:
+khronos_validation.report_flags = info,warn,error,perf")
