@@ -120,6 +120,9 @@ namespace Pipeline
 		struct CreateInfo {
 			vk::Device device;
 			vk::Extent2D extent;
+			// vk::Format color_format = vk::Format::eR8G8B8A8Unorm;
+			vk::Format color_format = vk::Format::eR16G16B16A16Sfloat;
+			vk::Format depth_format = vk::Format::eD24UnormS8Uint;
 			vk::PolygonMode poly_mode = vk::PolygonMode::eFill;
 			vk::PrimitiveTopology primitive_topology = vk::PrimitiveTopology::eTriangleList;
 			vk::Bool32 primitive_restart = false;
@@ -234,12 +237,11 @@ namespace Pipeline
 			};
 
 			// create pipeline
-			vk::Format outputFormat = vk::Format::eR16G16B16A16Sfloat;
 			vk::PipelineRenderingCreateInfo renderInfo {
 				.colorAttachmentCount = 1,
-				.pColorAttachmentFormats = &outputFormat,
-				.depthAttachmentFormat = vk::Format::eD24UnormS8Uint,
-				.stencilAttachmentFormat = vk::Format::eD24UnormS8Uint,
+				.pColorAttachmentFormats = &info.color_format,
+				.depthAttachmentFormat = info.depth_format,
+				.stencilAttachmentFormat = info.depth_format,
 			};
 			vk::GraphicsPipelineCreateInfo pipeInfo {
 				.pNext = &renderInfo,

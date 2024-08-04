@@ -211,13 +211,21 @@ private:
         // create smaa edges and blend images
         info_image = {
             .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16B16A16Sfloat,
+            .format = vk::Format::eR16G16Sfloat,
             .extent { extent.width, extent.height, 1 },
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eSampled,
         };
         _smaa_edges.init(info_image);
+        info_image = {
+            .device = device, .vmalloc = vmalloc,
+            .format = vk::Format::eR16G16B16A16Sfloat,
+            .extent { extent.width, extent.height, 1 },
+            .usage = 
+                vk::ImageUsageFlagBits::eColorAttachment | 
+                vk::ImageUsageFlagBits::eSampled,
+        };
         _smaa_blend.init(info_image);
 
         // load smaa textures
@@ -253,19 +261,17 @@ private:
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
-            .cull_mode = vk::CullModeFlagBits::eNone,
+            .color_format = vk::Format::eR16G16Sfloat,
             .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
         };
         _pipe_smaa_edge_detection.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
-            .cull_mode = vk::CullModeFlagBits::eNone,
             .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
         };
         _pipe_smaa_blend_weight_calc.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
-            .cull_mode = vk::CullModeFlagBits::eNone,
             .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
         };
         _pipe_smaa_neigh_blending.init(info_pipeline);
@@ -358,7 +364,7 @@ private:
     Pipeline::Graphics _pipe_smaa_neigh_blending;
     Image _smaa_search_tex; // constant
     Image _smaa_area_tex; // constant
-    Image _smaa_edges; // intermediate SMAA output // todo: reduce to 1/2 channels
+    Image _smaa_edges; // intermediate SMAA output
     Image _smaa_blend; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
     bool _smaa_enabled = true;

@@ -6,11 +6,10 @@
 
 layout(location = 0) in vec2 in_texcoord;
 layout(location = 1) in vec4 in_offsets[3];
-layout(location = 0) out vec4 out_edges;
+layout(location = 0) out vec2 out_edges;
 layout(binding = 0) uniform sampler2D tex_color;
 
 void main() {
-    // vec2 edges = SMAALumaEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
-    vec2 edges = SMAAColorEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
-    out_edges = vec4(edges, 0.0, 0.0); // TODO: reduce to 2 channels
+    // out_edges = SMAALumaEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
+    out_edges = SMAAColorEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
 }
