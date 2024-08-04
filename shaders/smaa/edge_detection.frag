@@ -13,7 +13,4 @@ void main() {
     // vec2 edge = SMAALumaEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
     vec2 edges = SMAAColorEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
     out_edges = vec4(edges, 0.0, 0.0); // TODO: reduce output texture to 2 channels
-
-    // out_edges = texelFetch(tex_color, ivec2(gl_FragCoord.xy), 0);
-    // out_edges = texture(tex_color, in_texcoord);
 }

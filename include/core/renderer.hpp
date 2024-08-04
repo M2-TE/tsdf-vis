@@ -224,18 +224,18 @@ private:
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8Unorm,
             .extent { SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, 1 },
-            .usage = vk::ImageUsageFlagBits::eSampled,
+            .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_search_tex.init(info_image);
-        _smaa_search_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(searchTexBytes), sizeof(searchTexBytes)));
+        _smaa_search_tex.load_texture(device, vmalloc, queues, std::span(reinterpret_cast<const std::byte*>(searchTexBytes), sizeof(searchTexBytes)));
         info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8G8Unorm,
             .extent { AREATEX_WIDTH, AREATEX_HEIGHT, 1 },
-            .usage = vk::ImageUsageFlagBits::eSampled,
+            .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_area_tex.init(info_image);
-        _smaa_area_tex.load_texture(vmalloc, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
+        _smaa_area_tex.load_texture(device, vmalloc, queues, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
 
         // transition smaa textures to their permanent layouts
         vk::CommandBuffer cmd = queues.oneshot_begin(device);
@@ -274,8 +274,8 @@ private:
         _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 0, _smaa_edges);
         _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 1, _smaa_area_tex);
         _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 2, _smaa_search_tex);
-        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _smaa_blend);
-        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _color);
+        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _color);
+        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _smaa_blend);
     }
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
         _smaa_search_tex.destroy(device, vmalloc);
@@ -294,7 +294,7 @@ private:
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
+            .dst_access = vk::AccessFlagBits2::eShaderRead
         };
         _color.transition_layout(info_transition);
         info_transition = { // output
@@ -338,7 +338,7 @@ private:
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
         };
         _smaa_output.transition_layout(info_transition);
-        _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eDontCare);
+        _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
     }
 
 private:
@@ -351,7 +351,7 @@ private:
     Pipeline::Graphics _pipe_scan_points;
     Pipeline::Graphics _pipe_cells;
 
-    // smaa:
+    // smaa: // todo: stencil optimizations
     Pipeline::Graphics _pipe_smaa_edge_detection;
     Pipeline::Graphics _pipe_smaa_blend_weight_calc;
     Pipeline::Graphics _pipe_smaa_neigh_blending;
@@ -360,5 +360,5 @@ private:
     Image _smaa_edges; // intermediate SMAA output // todo: reduce to 1/2 channels
     Image _smaa_blend; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
-    bool _smaa_enabled = false;
+    bool _smaa_enabled = true;
 };

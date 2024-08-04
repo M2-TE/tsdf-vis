@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
+#include "core/queues.hpp"
 
 struct Image {
     struct CreateInfo {
@@ -88,14 +89,14 @@ struct Image {
         }
     }
     
-    void load_texture(vma::Allocator vmalloc, std::span<const std::byte> tex_data) {
+    void load_texture(vk::Device device, vma::Allocator vmalloc, Queues& queues, std::span<const std::byte> tex_data) {
         // create image data buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = tex_data.size(),
-			.usage = vk::BufferUsageFlagBits::eVertexBuffer,
+			.usage = vk::BufferUsageFlagBits::eTransferSrc,
 			.sharingMode = vk::SharingMode::eExclusive,
-			.queueFamilyIndexCount = 0,
-			.pQueueFamilyIndices = nullptr,
+			.queueFamilyIndexCount = 1,
+			.pQueueFamilyIndices = &queues._universal_i,
 		};
 		vma::AllocationCreateInfo info_allocation {
 			.flags =
@@ -116,8 +117,38 @@ struct Image {
         std::memcpy(mapped_data_p, tex_data.data(), tex_data.size());
         vmalloc.unmapMemory(staging_alloc);
 
+        vk::CommandBuffer cmd = queues.oneshot_begin(device);
+        // transition image for transfer
+        TransitionInfo info_transition {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eTransferDstOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eAllCommands,
+            .dst_access = vk::AccessFlagBits2::eTransferWrite
+        };
+        transition_layout(info_transition);
         // copy staging buffer data to image
-        // TODO
+        vk::BufferImageCopy2 region {
+            .bufferOffset = 0,
+            .bufferRowLength = 0,
+            .bufferImageHeight = 0,
+            .imageSubresource {
+                .aspectMask = _aspects,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .imageOffset = vk::Offset3D(),
+            .imageExtent = _extent,
+        };
+        vk::CopyBufferToImageInfo2 info_copy {
+            .srcBuffer = staging_buffer,
+            .dstImage = _image,
+            .dstImageLayout = vk::ImageLayout::eTransferDstOptimal,
+            .regionCount = 1,
+            .pRegions = &region,
+        };
+        cmd.copyBufferToImage2(info_copy);
+        queues.oneshot_end(device, cmd);
         
         // clean up staging buffer
         vmalloc.destroyBuffer(staging_buffer, staging_alloc);
