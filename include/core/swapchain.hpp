@@ -8,7 +8,7 @@
 class Swapchain {
     struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
-            _command_pool = device.createCommandPool({ .queueFamilyIndex = queues._universal_i }); // todo: explicitly use graphics queue
+            _command_pool = device.createCommandPool({ .queueFamilyIndex = queues._graphics_i });
             vk::CommandBufferAllocateInfo bufferInfo {
                 .commandPool = _command_pool,
                 .level = vk::CommandBufferLevel::ePrimary,
