@@ -27,7 +27,7 @@ public:
         DeviceSelector device_selector {
             ._required_major = 1,
             ._required_minor = 3,
-            ._preferred_device_type = vk::PhysicalDeviceType::eIntegratedGpu,
+            ._preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu,
             ._required_extensions {
                 vk::KHRSwapchainExtensionName,
                 // vk::KHRDynamicRenderingLocalReadExtensionName,
@@ -88,6 +88,7 @@ public:
 
         
         // create renderer components
+        DepthStencil::set_format(_phys_device);
         _queues.init(_device, queue_mappings);
         _camera.init(_vmalloc, _queues._universal_i, _window.size());
         _swapchain._resize_requested = true;

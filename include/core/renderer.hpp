@@ -15,6 +15,7 @@
 #include "SearchTex.h"
 
 class Renderer {
+    // TODO: move away from timeline semaphores, they suck
     // move this and swapchain thingy to its own header
     struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
@@ -76,18 +77,13 @@ public:
         _color.init(info_image);
 
         // create depth stencil image
-        info_image = {
-            .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eD24UnormS8Uint,
-            .extent { extent.width, extent.height, 1 },
-            .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            .aspects = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil,
-        };
-        _depth.init(info_image);
+        _depth_stencil.init(device, vmalloc, { extent.width, extent.height, 1 });
 
         // create graphics pipelines
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
+            .color_formats = { _color._format },
+            .depth_format = _depth_stencil._format,
             .cull_mode = vk::CullModeFlagBits::eNone,
             .depth_write = true, .depth_test = true,
             .vs_path = "defaults/default.vert", .fs_path = "defaults/default.frag",
@@ -96,6 +92,8 @@ public:
         // specifically for pointclouds and tsdf cells
         info_pipeline = {
             .device = device, .extent = extent,
+            .color_formats = { _color._format },
+            .depth_format = _depth_stencil._format,
             .poly_mode = vk::PolygonMode::ePoint,
             .primitive_topology = vk::PrimitiveTopology::ePointList,
             .cull_mode = vk::CullModeFlagBits::eNone,
@@ -105,6 +103,8 @@ public:
         _pipe_scan_points.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
+            .color_formats = { _color._format },
+            .depth_format = _depth_stencil._format,
             .poly_mode = vk::PolygonMode::eLine,
             .primitive_topology = vk::PrimitiveTopology::eLineStrip,
             .primitive_restart = true,
@@ -124,7 +124,7 @@ public:
     void destroy(vk::Device device, vma::Allocator vmalloc) {
         for (auto& frame: _sync_frames) frame.destroy(device);
         _color.destroy(device, vmalloc);
-        _depth.destroy(device, vmalloc);
+        _depth_stencil.destroy(device, vmalloc);
         _pipe_default.destroy(device);
         _pipe_scan_points.destroy(device);
         _pipe_cells.destroy(device);
@@ -141,7 +141,7 @@ public:
         vk::SemaphoreWaitInfo info_sema_wait {
             .semaphoreCount = 1,
             .pSemaphores = &frame._timeline,
-            .pValues = &frame._timeline_val,  
+            .pValues = &frame._timeline_val,
         };
         for (vk::Result result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
             result = device.waitSemaphores(info_sema_wait, UINT64_MAX);
@@ -183,30 +183,37 @@ private:
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
         _color.transition_layout(info_transition);
-        _pipe_default.execute(cmd, scene._ply._mesh, _color, vk::AttachmentLoadOp::eClear, _depth, vk::AttachmentLoadOp::eClear);
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+            .dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+        };
+        _depth_stencil.transition_layout(info_transition);
+        _pipe_default.execute(cmd, scene._ply._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
 
         // draw points
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
         _color.transition_layout(info_transition);
-        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
+        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
         
         // draw cells
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
         _color.transition_layout(info_transition);
-        _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
+        _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
     }
     
     void smaa_init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
@@ -275,17 +282,19 @@ private:
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
-            .color_format = vk::Format::eR16G16Sfloat,
+            .color_formats = { _smaa_edges._format },
             .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
         };
         _pipe_smaa_edge_detection.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
+            .color_formats = { _smaa_blend._format },
             .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
         };
         _pipe_smaa_blend_weight_calc.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
+            .color_formats = { _color._format },
             .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
         };
         _pipe_smaa_neigh_blending.init(info_pipeline);
@@ -367,7 +376,7 @@ private:
     uint32_t _sync_frame_i = 0;
     
     Image _color;
-    Image _depth;
+    DepthStencil _depth_stencil;
     Pipeline::Graphics _pipe_default;
     Pipeline::Graphics _pipe_scan_points;
     Pipeline::Graphics _pipe_cells;

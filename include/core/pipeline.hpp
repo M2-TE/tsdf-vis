@@ -120,9 +120,8 @@ namespace Pipeline
 		struct CreateInfo {
 			vk::Device device;
 			vk::Extent2D extent;
-			// vk::Format color_format = vk::Format::eR8G8B8A8Unorm;
-			vk::Format color_format = vk::Format::eR16G16B16A16Sfloat;
-			vk::Format depth_format = vk::Format::eD24UnormS8Uint;
+			std::vector<vk::Format> color_formats;
+			vk::Format depth_format = vk::Format::eUndefined;
 			vk::PolygonMode poly_mode = vk::PolygonMode::eFill;
 			vk::PrimitiveTopology primitive_topology = vk::PrimitiveTopology::eTriangleList;
 			vk::Bool32 primitive_restart = false;
@@ -238,11 +237,12 @@ namespace Pipeline
 
 			// create pipeline
 			vk::PipelineRenderingCreateInfo renderInfo {
-				.colorAttachmentCount = 1,
-				.pColorAttachmentFormats = &info.color_format,
+				.colorAttachmentCount = (uint32_t)info.color_formats.size(),
+				.pColorAttachmentFormats = info.color_formats.data(),
 				.depthAttachmentFormat = info.depth_format,
 				.stencilAttachmentFormat = info.depth_format,
 			};
+
 			vk::GraphicsPipelineCreateInfo pipeInfo {
 				.pNext = &renderInfo,
 				.stageCount = shader_stages.size(), 
@@ -271,7 +271,7 @@ namespace Pipeline
 		template<typename Vertex, typename Index>
 		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, 
 			Image& color_dst, vk::AttachmentLoadOp color_load, 
-			Image& depth_dst, vk::AttachmentLoadOp depth_load)
+			DepthStencil& depth_dst, vk::AttachmentLoadOp depth_load)
 		{
 			vk::RenderingAttachmentInfo info_color_attach {
 				.imageView = color_dst._view,
@@ -283,7 +283,7 @@ namespace Pipeline
 			};
 			vk::RenderingAttachmentInfo info_depth_attach {
 				.imageView = depth_dst._view,
-				.imageLayout = vk::ImageLayout::eDepthAttachmentOptimal,
+				.imageLayout = depth_dst._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = depth_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,

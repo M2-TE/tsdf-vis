@@ -224,3 +224,76 @@ struct Image {
     vk::PipelineStageFlags2 _last_stage;
     bool _owning;
 };
+
+struct DepthBuffer : public Image {
+    // TODO
+};
+struct DepthStencil : public Image {
+    static vk::Format& get_format() {
+        static vk::Format format = vk::Format::eUndefined;
+        return format;
+    }
+    static void set_format(vk::PhysicalDevice phys_device) {
+        // depth stencil formats in order of preference
+        std::vector<vk::Format> formats = {
+            vk::Format::eD32SfloatS8Uint,
+            vk::Format::eD24UnormS8Uint,
+            vk::Format::eD16UnormS8Uint
+        };
+        // set depth stencil format to first supported format
+        for (auto& format : formats) {
+            vk::FormatProperties props = phys_device.getFormatProperties(format);
+            if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+                get_format() = format;
+                break;
+            }
+        }
+    }
+    void init(vk::Device device, vma::Allocator vmalloc, vk::Extent3D extent) {
+        _owning = true;
+        _extent = extent;
+        _format = get_format();
+        _aspects = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+        _last_layout = vk::ImageLayout::eUndefined;
+        _last_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
+        _last_stage = vk::PipelineStageFlagBits2::eTopOfPipe;
+        // create image
+        vk::ImageCreateInfo info_image {
+            .imageType = vk::ImageType::e2D,
+            .format = _format,
+            .extent = _extent,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = vk::SampleCountFlagBits::e1,
+            .tiling = vk::ImageTiling::eOptimal,
+            .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled
+        };
+        vma::AllocationCreateInfo info_alloc {
+            .usage = vma::MemoryUsage::eAutoPreferDevice,
+            .requiredFlags = vk::MemoryPropertyFlagBits::eDeviceLocal,
+            .priority = 1.0f,
+        };
+        std::tie(_image, _allocation) = vmalloc.createImage(info_image, info_alloc);
+        
+        // create image view
+        vk::ImageViewCreateInfo info_depth_view {
+            .image = _image,
+            .viewType = vk::ImageViewType::e2D,
+            .format = _format,
+            .components {
+                .r = vk::ComponentSwizzle::eIdentity,
+                .g = vk::ComponentSwizzle::eIdentity,
+                .b = vk::ComponentSwizzle::eIdentity,
+                .a = vk::ComponentSwizzle::eIdentity,
+            },
+            .subresourceRange {
+                .aspectMask = _aspects,
+                .baseMipLevel = 0,
+                .levelCount = vk::RemainingMipLevels,
+                .baseArrayLayer = 0,
+                .layerCount = vk::RemainingArrayLayers,
+            }
+        };
+        _view = device.createImageView(info_depth_view);
+    }
+};
