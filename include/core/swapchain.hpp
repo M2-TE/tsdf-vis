@@ -137,7 +137,7 @@ public:
         device.resetCommandPool(frame._command_pool);
         vk::CommandBuffer cmd = frame._command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        // draw_imgui(cmd, src_image);
+        draw_imgui(cmd, src_image);
         draw_swapchain(cmd, src_image, swap_index);
         // transition swapchain image into presentation layout
         Image::TransitionInfo info_transition {
