@@ -189,9 +189,23 @@ private:
         _pipe_default.execute(cmd, scene._ply._mesh, _color, vk::AttachmentLoadOp::eClear, _depth, vk::AttachmentLoadOp::eClear);
 
         // draw points
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _color.transition_layout(info_transition);
         _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
         
         // draw cells
+        info_transition = {
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _color.transition_layout(info_transition);
         _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth, vk::AttachmentLoadOp::eLoad);
     }
     
@@ -367,5 +381,5 @@ private:
     Image _smaa_edges; // intermediate SMAA output
     Image _smaa_blend; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
-    bool _smaa_enabled = true;
+    bool _smaa_enabled = false;
 };
