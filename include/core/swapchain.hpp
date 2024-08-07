@@ -8,10 +8,7 @@
 class Swapchain {
     struct SyncFrame {
         void init(vk::Device device, Queues& queues) {
-            vk::CommandPoolCreateInfo info_command_pool {
-                .queueFamilyIndex = queues._universal_i,
-            };
-            _command_pool = device.createCommandPool(info_command_pool);
+            _command_pool = device.createCommandPool({ .queueFamilyIndex = queues._universal_i }); // todo: explicitly use graphics queue
             vk::CommandBufferAllocateInfo bufferInfo {
                 .commandPool = _command_pool,
                 .level = vk::CommandBufferLevel::ePrimary,
@@ -20,24 +17,23 @@ class Swapchain {
             _command_buffer = device.allocateCommandBuffers(bufferInfo).front();
 
             vk::SemaphoreCreateInfo semaInfo {};
-            _sema_swap_acquire = device.createSemaphore(semaInfo);
-            _sema_swap_write = device.createSemaphore(semaInfo);
-            vk::FenceCreateInfo fenceInfo { .flags = vk::FenceCreateFlagBits::eSignaled };
-            _fence_present = device.createFence(fenceInfo);
+            _ready_to_record = device.createFence({ .flags = vk::FenceCreateFlagBits::eSignaled });
+            _ready_to_write = device.createSemaphore(semaInfo);
+            _ready_to_read = device.createSemaphore(semaInfo);
         }
         void destroy(vk::Device device) {
             device.destroyCommandPool(_command_pool);
-            device.destroySemaphore(_sema_swap_acquire);
-            device.destroySemaphore(_sema_swap_write);
-            device.destroyFence(_fence_present);
+            device.destroyFence(_ready_to_record);
+            device.destroySemaphore(_ready_to_write);
+            device.destroySemaphore(_ready_to_read);
         }
         // command recording
         vk::CommandPool _command_pool;
         vk::CommandBuffer _command_buffer;
         // synchronization
-        vk::Semaphore _sema_swap_acquire;
-        vk::Semaphore _sema_swap_write;
-        vk::Fence _fence_present;
+        vk::Fence _ready_to_record;
+        vk::Semaphore _ready_to_write;
+        vk::Semaphore _ready_to_read;
     };
 public:
     void init(vk::PhysicalDevice phys_device, vk::Device device, Window& window, Queues& queues) {
@@ -121,16 +117,16 @@ public:
         init(physDevice, device, window, queues);
         fmt::println("resized to: {}x{}", window.size().width, window.size().height);
     }
-    void present(vk::Device device, Image& src_image, vk::Semaphore timeline, uint64_t& timeline_val) {
+    void present(vk::Device device, Image& src_image, vk::Semaphore src_ready_to_read, vk::Semaphore src_ready_to_write) {
         // wait for this frame's fence to be signaled and reset it
         SyncFrame& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
-        while (vk::Result::eTimeout == device.waitForFences(frame._fence_present, vk::True, UINT64_MAX));
-        device.resetFences(frame._fence_present);
+        while (vk::Result::eTimeout == device.waitForFences(frame._ready_to_record, vk::True, UINT64_MAX));
+        device.resetFences(frame._ready_to_record);
 
         // acquire image from swapchain
         uint32_t swap_index;
         for (auto result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
-            std::tie(result, swap_index) = device.acquireNextImageKHR(_swapchain, UINT64_MAX, frame._sema_swap_acquire);
+            std::tie(result, swap_index) = device.acquireNextImageKHR(_swapchain, UINT64_MAX, frame._ready_to_write);
         }
         
         // restart command buffer
@@ -150,43 +146,27 @@ public:
         cmd.end();
         
         // submit command buffer to graphics queue
-        std::array<vk::SemaphoreSubmitInfo, 2> infos_wait {
-            vk::SemaphoreSubmitInfo {
-                .semaphore = timeline,
-                .value = timeline_val++,
-                .stageMask = vk::PipelineStageFlagBits2::eTopOfPipe,
-            },
-            vk::SemaphoreSubmitInfo {
-                .semaphore = frame._sema_swap_acquire,
-                .stageMask = vk::PipelineStageFlagBits2::eTopOfPipe,  
-            },
+        std::array<vk::Semaphore, 2> wait_semaphores = { src_ready_to_read, frame._ready_to_write };
+        std::array<vk::Semaphore, 2> sign_semaphores = { src_ready_to_write, frame._ready_to_read };
+        std::array<vk::PipelineStageFlags, 2> wait_stages = { 
+            vk::PipelineStageFlagBits::eTopOfPipe, 
+            vk::PipelineStageFlagBits::eTopOfPipe 
         };
-        std::array<vk::SemaphoreSubmitInfo, 2> infos_signal {
-            vk::SemaphoreSubmitInfo {
-                .semaphore = timeline,
-                .value = timeline_val,
-                .stageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,
-            },
-            vk::SemaphoreSubmitInfo {
-                .semaphore = frame._sema_swap_write,
-                .stageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,  
-            },
+        vk::SubmitInfo info_submit {
+            .waitSemaphoreCount = (uint32_t)wait_semaphores.size(),
+            .pWaitSemaphores = wait_semaphores.data(),
+            .pWaitDstStageMask = wait_stages.data(),
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmd,
+            .signalSemaphoreCount = (uint32_t)sign_semaphores.size(),
+            .pSignalSemaphores = sign_semaphores.data(),
         };
-        vk::CommandBufferSubmitInfo info_cmd_submit { .commandBuffer = cmd };
-        vk::SubmitInfo2 info_submit {
-            .waitSemaphoreInfoCount = (uint32_t)infos_wait.size(),
-            .pWaitSemaphoreInfos = infos_wait.data(),
-            .commandBufferInfoCount = 1,
-            .pCommandBufferInfos = &info_cmd_submit,
-            .signalSemaphoreInfoCount = (uint32_t)infos_signal.size(),
-            .pSignalSemaphoreInfos = infos_signal.data(),  
-        };
-        _presentation_queue.submit2(info_submit, frame._fence_present);
+        _presentation_queue.submit(info_submit, frame._ready_to_record);
 
         // present swapchain image
         vk::PresentInfoKHR presentInfo {
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = &frame._sema_swap_write,
+            .pWaitSemaphores = &frame._ready_to_read,
             .swapchainCount = 1,
             .pSwapchains = &_swapchain,
             .pImageIndices = &swap_index  

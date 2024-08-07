@@ -14,76 +14,113 @@
 #include "AreaTex.h"
 #include "SearchTex.h"
 
+// todo: remove timeline semaphore from vulkan features
 class Renderer {
-    // TODO: move away from timeline semaphores, they suck
-    // move this and swapchain thingy to its own header
-    struct SyncFrame {
-        void init(vk::Device device, Queues& queues) {
-            vk::CommandPoolCreateInfo info_pool {
-                .queueFamilyIndex = queues._universal_i,
-            };
-            _command_pool = device.createCommandPool(info_pool);
-
-            vk::CommandBufferAllocateInfo info_buffer {
+    struct Frame {
+        void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
+            // allocate single command pool and buffer pair
+            _command_pool = device.createCommandPool({ .queueFamilyIndex = queues._universal_i });
+            vk::CommandBufferAllocateInfo bufferInfo {
                 .commandPool = _command_pool,
                 .level = vk::CommandBufferLevel::ePrimary,
                 .commandBufferCount = 1,
             };
-            _command_buffer = device.allocateCommandBuffers(info_buffer).front();
-            
-            vk::SemaphoreTypeCreateInfo info_sema_type {
-                .semaphoreType = vk::SemaphoreType::eTimeline,
-                .initialValue = 1,  
+            _command_buffer = device.allocateCommandBuffers(bufferInfo).front();
+
+            // allocate semaphores and fences
+            _ready_to_record = device.createFence({ .flags = vk::FenceCreateFlagBits::eSignaled });
+            _ready_to_write = device.createSemaphore({});
+            _ready_to_read = device.createSemaphore({});
+            // create dummy submission to initialize _ready_to_write
+            auto cmd = queues.oneshot_begin(device);
+            queues.oneshot_end(device, cmd, _ready_to_write);
+
+            // create image with 16 bits color depth
+            Image::CreateInfo info_image {
+                .device = device, .vmalloc = vmalloc,
+                .format = vk::Format::eR16G16B16A16Sfloat,
+                .extent { extent.width, extent.height, 1 },
+                .usage = 
+                    vk::ImageUsageFlagBits::eColorAttachment | 
+                    vk::ImageUsageFlagBits::eTransferSrc | 
+                    vk::ImageUsageFlagBits::eSampled,
             };
-            vk::SemaphoreCreateInfo info_sema { .pNext = &info_sema_type };
-            _timeline = device.createSemaphore(info_sema);
-            _timeline_val = info_sema_type.initialValue;
+            _color.init(info_image);
+
+            // create depth stencil image
+            _depth_stencil.init(device, vmalloc, { extent.width, extent.height, 1 });
+
+            // create output image with 16 bits color depth
+            info_image = {
+                .device = device, .vmalloc = vmalloc,
+                .format = vk::Format::eR16G16B16A16Sfloat,
+                .extent { extent.width, extent.height, 1 },
+                .usage = 
+                    vk::ImageUsageFlagBits::eColorAttachment |
+                    vk::ImageUsageFlagBits::eTransferSrc |
+                    vk::ImageUsageFlagBits::eSampled
+            };
+            _smaa_output.init(info_image);
+
+            // create smaa edges and blend images
+            info_image = {
+                .device = device, .vmalloc = vmalloc,
+                .format = vk::Format::eR16G16Sfloat,
+                .extent { extent.width, extent.height, 1 },
+                .usage = 
+                    vk::ImageUsageFlagBits::eColorAttachment | 
+                    vk::ImageUsageFlagBits::eSampled,
+            };
+            _smaa_edges.init(info_image);
+            info_image = {
+                .device = device, .vmalloc = vmalloc,
+                .format = vk::Format::eR16G16B16A16Sfloat,
+                .extent { extent.width, extent.height, 1 },
+                .usage = 
+                    vk::ImageUsageFlagBits::eColorAttachment | 
+                    vk::ImageUsageFlagBits::eSampled,
+            };
+            _smaa_blend.init(info_image);
         }
-        void destroy(vk::Device device) {
+        void destroy(vk::Device device, vma::Allocator vmalloc) {
             device.destroyCommandPool(_command_pool);
-            device.destroySemaphore(_timeline);
-        }
-        void reset_semaphore(vk::Device device) {
-            vk::SemaphoreTypeCreateInfo info_sema_type {
-                .semaphoreType = vk::SemaphoreType::eTimeline,
-                .initialValue = 0,
-            };
-            vk::SemaphoreCreateInfo info_sema { .pNext = &info_sema_type };
-            device.destroySemaphore(_timeline);
-            _timeline = device.createSemaphore(info_sema);
-            _timeline_val = info_sema_type.initialValue;
+            device.destroyFence(_ready_to_record);
+            device.destroySemaphore(_ready_to_write);
+            device.destroySemaphore(_ready_to_read);
+            _color.destroy(device, vmalloc);
+            _depth_stencil.destroy(device, vmalloc);
+            _smaa_edges.destroy(device, vmalloc);
+            _smaa_blend.destroy(device, vmalloc);
+            _smaa_output.destroy(device, vmalloc);
         }
         
+        // synchronization
+        vk::Fence _ready_to_record;
+        vk::Semaphore _ready_to_write;
+        vk::Semaphore _ready_to_read;
+
+        // command recording
         vk::CommandPool _command_pool;
         vk::CommandBuffer _command_buffer;
-        vk::Semaphore _timeline;
-        uint64_t _timeline_val;
+
+        // Images
+        Image _color;
+        DepthStencil _depth_stencil;
+        // SMAA
+        Image _smaa_edges; // intermediate SMAA output
+        Image _smaa_blend; // intermediate SMAA output
+        Image _smaa_output; // final SMAA output
     };
 public:
     void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) {
-        // create SyncFrame objects
-        for (auto& frame: _sync_frames) frame.init(device, queues);
-        
-        // create image with 16 bits color depth
-        Image::CreateInfo info_image {
-            .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16B16A16Sfloat,
-            .extent { extent.width, extent.height, 1 },
-            .usage = 
-                vk::ImageUsageFlagBits::eColorAttachment | 
-                vk::ImageUsageFlagBits::eTransferSrc | 
-                vk::ImageUsageFlagBits::eSampled,
-        };
-        _color.init(info_image);
-
-        // create depth stencil image
-        _depth_stencil.init(device, vmalloc, { extent.width, extent.height, 1 });
+        // create multiple frames in flight
+        for (auto& frame: _frames) frame.init(device, vmalloc, queues, extent);
 
         // create graphics pipelines
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
-            .color_formats = { _color._format },
-            .depth_format = _depth_stencil._format,
+            .color_formats = { _frames[0]._color._format },
+            .depth_format = _frames[0]._depth_stencil._format,
             .cull_mode = vk::CullModeFlagBits::eNone,
             .depth_write = true, .depth_test = true,
             .vs_path = "defaults/default.vert", .fs_path = "defaults/default.frag",
@@ -92,8 +129,8 @@ public:
         // specifically for pointclouds and tsdf cells
         info_pipeline = {
             .device = device, .extent = extent,
-            .color_formats = { _color._format },
-            .depth_format = _depth_stencil._format,
+            .color_formats = { _frames[0]._color._format },
+            .depth_format = _frames[0]._depth_stencil._format,
             .poly_mode = vk::PolygonMode::ePoint,
             .primitive_topology = vk::PrimitiveTopology::ePointList,
             .cull_mode = vk::CullModeFlagBits::eNone,
@@ -103,8 +140,8 @@ public:
         _pipe_scan_points.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
-            .color_formats = { _color._format },
-            .depth_format = _depth_stencil._format,
+            .color_formats = { _frames[0]._color._format },
+            .depth_format = _frames[0]._depth_stencil._format,
             .poly_mode = vk::PolygonMode::eLine,
             .primitive_topology = vk::PrimitiveTopology::eLineStrip,
             .primitive_restart = true,
@@ -122,9 +159,7 @@ public:
         smaa_init(device, vmalloc, queues, extent);
     }
     void destroy(vk::Device device, vma::Allocator vmalloc) {
-        for (auto& frame: _sync_frames) frame.destroy(device);
-        _color.destroy(device, vmalloc);
-        _depth_stencil.destroy(device, vmalloc);
+        for (auto& frame: _frames) frame.destroy(device, vmalloc);
         _pipe_default.destroy(device);
         _pipe_scan_points.destroy(device);
         _pipe_cells.destroy(device);
@@ -136,47 +171,40 @@ public:
         init(device, vmalloc, queues, extent, camera);
     }
     void render(vk::Device device, Swapchain& swapchain, Queues& queues, Scene& scene) {
-        // wait for command buffer execution
-        SyncFrame& frame = _sync_frames[_sync_frame_i++ % _sync_frames.size()];
-        vk::SemaphoreWaitInfo info_sema_wait {
-            .semaphoreCount = 1,
-            .pSemaphores = &frame._timeline,
-            .pValues = &frame._timeline_val,
-        };
-        for (vk::Result result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
-            result = device.waitSemaphores(info_sema_wait, UINT64_MAX);
-        }
-        frame.reset_semaphore(device);
+        Frame& frame = _frames[_frame_index++ % _frames.size()];
+
+        // wait until the command buffer can be recorded
+        while (vk::Result::eTimeout == device.waitForFences(frame._ready_to_record, vk::True, UINT64_MAX));
+        device.resetFences(frame._ready_to_record);
         
-        // record command buffer
+        // reset and record command buffer
         device.resetCommandPool(frame._command_pool, {});
         vk::CommandBuffer cmd = frame._command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        execute_pipes(device, cmd, scene);
+        execute_pipes(device, cmd, scene, frame);
         if (_smaa_enabled) smaa_execute(cmd);
         cmd.end();
         
         // submit command buffer
-        vk::TimelineSemaphoreSubmitInfo info_timeline {
-            .signalSemaphoreValueCount = 1,
-            .pSignalSemaphoreValues = &(++frame._timeline_val),
-        };
+        vk::PipelineStageFlags wait_stage = vk::PipelineStageFlagBits::eTopOfPipe;
         vk::SubmitInfo info_submit {
-            .pNext = &info_timeline,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &frame._ready_to_write,
+            .pWaitDstStageMask = &wait_stage,
             .commandBufferCount = 1,
             .pCommandBuffers = &cmd,
             .signalSemaphoreCount = 1,
-            .pSignalSemaphores = &frame._timeline,
+            .pSignalSemaphores = &frame._ready_to_read,
         };
-        queues._universal.submit(info_submit);
+        queues._universal.submit(info_submit, frame._ready_to_record);
 
         // present drawn image
-        Image& output_image = _smaa_enabled ? _smaa_output : _color;
-        swapchain.present(device, output_image, frame._timeline, frame._timeline_val);
+        Image& output_image = _smaa_enabled ? frame._smaa_output : frame._color;
+        swapchain.present(device, output_image, frame._ready_to_read, frame._ready_to_write);
     }
     
 private:
-    void execute_pipes(vk::Device device, vk::CommandBuffer cmd, Scene& scene) {
+    void execute_pipes(vk::Device device, vk::CommandBuffer cmd, Scene& scene, Frame& frame) {
         // draw scan points
         Image::TransitionInfo info_transition;
         info_transition = {
@@ -185,15 +213,15 @@ private:
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
-        _color.transition_layout(info_transition);
+        frame._color.transition_layout(info_transition);
         info_transition = {
             .cmd = cmd,
             .new_layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
             .dst_stage = vk::PipelineStageFlagBits2::eEarlyFragmentTests,
             .dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         };
-        _depth_stencil.transition_layout(info_transition);
-        _pipe_default.execute(cmd, scene._ply._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
+        frame._depth_stencil.transition_layout(info_transition);
+        _pipe_default.execute(cmd, scene._ply._mesh, frame._color, vk::AttachmentLoadOp::eClear, frame._depth_stencil, vk::AttachmentLoadOp::eClear);
 
         // draw points
         info_transition = {
@@ -202,8 +230,8 @@ private:
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
-        _color.transition_layout(info_transition);
-        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+        frame._color.transition_layout(info_transition);
+        _pipe_scan_points.execute(cmd, scene._grid._scan_points, frame._color, vk::AttachmentLoadOp::eLoad, frame._depth_stencil, vk::AttachmentLoadOp::eLoad);
         
         // draw cells
         info_transition = {
@@ -212,44 +240,13 @@ private:
             .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentRead
         };
-        _color.transition_layout(info_transition);
-        _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+        frame._color.transition_layout(info_transition);
+        _pipe_cells.execute(cmd, scene._grid._query_points, frame._color, vk::AttachmentLoadOp::eLoad, frame._depth_stencil, vk::AttachmentLoadOp::eLoad);
     }
     
     void smaa_init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
-        // create output image with 16 bits color depth
-        Image::CreateInfo info_image {
-            .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16B16A16Sfloat,
-            .extent { extent.width, extent.height, 1 },
-            .usage = 
-                vk::ImageUsageFlagBits::eColorAttachment |
-                vk::ImageUsageFlagBits::eTransferSrc |
-                vk::ImageUsageFlagBits::eSampled
-        };
-        _smaa_output.init(info_image);
-
-        // create smaa edges and blend images
-        info_image = {
-            .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16Sfloat,
-            .extent { extent.width, extent.height, 1 },
-            .usage = 
-                vk::ImageUsageFlagBits::eColorAttachment | 
-                vk::ImageUsageFlagBits::eSampled,
-        };
-        _smaa_edges.init(info_image);
-        info_image = {
-            .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16B16A16Sfloat,
-            .extent { extent.width, extent.height, 1 },
-            .usage = 
-                vk::ImageUsageFlagBits::eColorAttachment | 
-                vk::ImageUsageFlagBits::eSampled,
-        };
-        _smaa_blend.init(info_image);
-
         // load smaa textures
+        Image::CreateInfo info_image;
         info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8Unorm,
@@ -282,113 +279,106 @@ private:
         // create smaa pipeline
         Pipeline::Graphics::CreateInfo info_pipeline {
             .device = device, .extent = extent,
-            .color_formats = { _smaa_edges._format },
+            .color_formats = { _frames[0]._smaa_edges._format },
             .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
         };
         _pipe_smaa_edge_detection.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
-            .color_formats = { _smaa_blend._format },
+            .color_formats = { _frames[0]._smaa_blend._format },
             .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
         };
         _pipe_smaa_blend_weight_calc.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
-            .color_formats = { _color._format },
+            .color_formats = { _frames[0]._color._format },
             .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
         };
         _pipe_smaa_neigh_blending.init(info_pipeline);
 
+        // TODO: need separate pipelines for each frame
         // update texture descriptors
-        _pipe_smaa_edge_detection.write_descriptor(device, 0, 0, _color);
-        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 0, _smaa_edges);
-        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 1, _smaa_area_tex);
-        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 2, _smaa_search_tex);
-        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _color);
-        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _smaa_blend);
+        // _pipe_smaa_edge_detection.write_descriptor(device, 0, 0, _color);
+        // _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 0, _smaa_edges);
+        // _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 1, _smaa_area_tex);
+        // _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 2, _smaa_search_tex);
+        // _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _color);
+        // _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _smaa_blend);
     }
     void smaa_destroy(vk::Device device, vma::Allocator vmalloc) {
         _smaa_search_tex.destroy(device, vmalloc);
         _smaa_area_tex.destroy(device, vmalloc);
-        _smaa_output.destroy(device, vmalloc);
-        _smaa_edges.destroy(device, vmalloc);
-        _smaa_blend.destroy(device, vmalloc);
         _pipe_smaa_edge_detection.destroy(device);
         _pipe_smaa_blend_weight_calc.destroy(device);
         _pipe_smaa_neigh_blending.destroy(device);
     }
     void smaa_execute(vk::CommandBuffer cmd) {
-        // SMAA edge detection
-        Image::TransitionInfo info_transition;
-        info_transition = { // input
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
-        };
-        _color.transition_layout(info_transition);
-        info_transition = { // output
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        };
-        _smaa_edges.transition_layout(info_transition);
-        _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
+        // // SMAA edge detection
+        // Image::TransitionInfo info_transition;
+        // info_transition = { // input
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+        //     .dst_access = vk::AccessFlagBits2::eShaderSampledRead
+        // };
+        // _color.transition_layout(info_transition);
+        // info_transition = { // output
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        // };
+        // _smaa_edges.transition_layout(info_transition);
+        // _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
 
-        // SMAA blending weight calculation
-        info_transition = { // input
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
-        };
-        _smaa_edges.transition_layout(info_transition);
-        info_transition = { // output
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        };
-        _smaa_blend.transition_layout(info_transition);
-        _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
+        // // SMAA blending weight calculation
+        // info_transition = { // input
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+        //     .dst_access = vk::AccessFlagBits2::eShaderSampledRead
+        // };
+        // _smaa_edges.transition_layout(info_transition);
+        // info_transition = { // output
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        // };
+        // _smaa_blend.transition_layout(info_transition);
+        // _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
 
-        // SMAA neighborhood blending
-        info_transition = { // input
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
-        };
-        _smaa_blend.transition_layout(info_transition);
-        info_transition = { // output
-            .cmd = cmd,
-            .new_layout = vk::ImageLayout::eAttachmentOptimal,
-            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        };
-        _smaa_output.transition_layout(info_transition);
-        _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
+        // // SMAA neighborhood blending
+        // info_transition = { // input
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+        //     .dst_access = vk::AccessFlagBits2::eShaderSampledRead
+        // };
+        // _smaa_blend.transition_layout(info_transition);
+        // info_transition = { // output
+        //     .cmd = cmd,
+        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
+        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        // };
+        // _smaa_output.transition_layout(info_transition);
+        // _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
     }
 
 private:
-    std::array<SyncFrame, 2> _sync_frames; // double buffering
-    uint32_t _sync_frame_i = 0;
-    
-    Image _color;
-    DepthStencil _depth_stencil;
+    std::array<Frame, 2> _frames; // double buffering
+    uint32_t _frame_index = 0;
     Pipeline::Graphics _pipe_default;
     Pipeline::Graphics _pipe_scan_points;
     Pipeline::Graphics _pipe_cells;
-
-    // smaa: // todo: stencil optimizations
+    // SMAA
+    // todo: stencil optimizations
+    // todo: separate sync for smaa images, as these dont need multiple frames in flight
     Pipeline::Graphics _pipe_smaa_edge_detection;
     Pipeline::Graphics _pipe_smaa_blend_weight_calc;
     Pipeline::Graphics _pipe_smaa_neigh_blending;
     Image _smaa_search_tex; // constant
     Image _smaa_area_tex; // constant
-    Image _smaa_edges; // intermediate SMAA output
-    Image _smaa_blend; // intermediate SMAA output
-    Image _smaa_output; // final SMAA output
     bool _smaa_enabled = false;
 };

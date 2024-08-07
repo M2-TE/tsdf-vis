@@ -33,11 +33,13 @@ struct Queues {
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         return cmd;
     }
-    void oneshot_end(vk::Device device, vk::CommandBuffer cmd) {
+    void oneshot_end(vk::Device device, vk::CommandBuffer cmd, vk::Semaphore sign_semaphore = nullptr) {
         cmd.end();
         vk::SubmitInfo info = {
             .commandBufferCount = 1,
             .pCommandBuffers = &cmd,
+            .signalSemaphoreCount = (uint32_t)(sign_semaphore == nullptr ? 0 : 1),
+            .pSignalSemaphores = &sign_semaphore,
         };
         _universal.submit(info);
         _universal.waitIdle();
