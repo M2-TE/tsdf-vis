@@ -236,9 +236,9 @@ struct DepthStencil : public Image {
     static void set_format(vk::PhysicalDevice phys_device) {
         // depth stencil formats in order of preference
         std::vector<vk::Format> formats = {
-            vk::Format::eD32SfloatS8Uint,
             vk::Format::eD24UnormS8Uint,
-            vk::Format::eD16UnormS8Uint
+            vk::Format::eD32SfloatS8Uint,
+            vk::Format::eD16UnormS8Uint,
         };
         // set depth stencil format to first supported format
         for (auto& format : formats) {

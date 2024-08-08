@@ -61,15 +61,13 @@ public:
             }
         }
 
-        uint32_t swapchain_image_count = capabilities.minImageCount + 1;
-        if (capabilities.maxImageCount > 0 && swapchain_image_count > capabilities.maxImageCount) {
-            swapchain_image_count = capabilities.maxImageCount;
-        }
-
         // create swapchain
         vk::SwapchainCreateInfoKHR info_swapchain {
             .surface = window._surface,
-            .minImageCount = swapchain_image_count,
+            .minImageCount = std::clamp<uint32_t>(
+                3, // request triple buffering by default
+                capabilities.minImageCount, 
+                capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount),
             .imageFormat = _format,
             .imageColorSpace = color_space,
             .imageExtent = window.size(),
@@ -133,7 +131,7 @@ public:
         device.resetCommandPool(frame._command_pool);
         vk::CommandBuffer cmd = frame._command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        // draw_imgui(cmd, src_image);
+        draw_imgui(cmd, src_image);
         draw_swapchain(cmd, src_image, swap_index);
         // transition swapchain image into presentation layout
         Image::TransitionInfo info_transition {

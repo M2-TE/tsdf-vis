@@ -87,8 +87,8 @@ namespace ImGui
                 .layerCount = 1,
                 .colorAttachmentCount = 1, .pColorAttachments = &info_render_attach
             };
-            cmd.beginRendering(info_render);
             ImGui::Render();
+            cmd.beginRendering(info_render);
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
             cmd.endRendering();
         }

@@ -43,7 +43,6 @@ public:
             ._required_vk11_features {
             },
             ._required_vk12_features {
-                .timelineSemaphore = true,
             },
             ._required_vk13_features {
                 .synchronization2 = true,
@@ -138,12 +137,14 @@ public:
         }
     }
     void execute_frame() {
+        handle_inputs();
         if (_swapchain._resize_requested) resize();
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
 
-        handle_inputs();
-        _camera.update(_vmalloc);
+        // forced to wait as camera buffer currently doesnt support multiple frames
+        _renderer.wait(_device);
+        update();
         _renderer.render(_device, _swapchain, _queues, _scene);
         Input::flush();
     }
@@ -153,14 +154,19 @@ private:
         _device.waitIdle();
         SDL_SyncWindow(_window._window_p);
         
-        fmt::println("renderer rebuild triggered");
         _camera.resize(_window.size());
         _renderer.resize(_device, _vmalloc, _queues, _window.size(), _camera);
         _swapchain.resize(_phys_device, _device, _window, _queues);
     }
+    void update() {
+        _camera.update(_vmalloc);
+    }
     void handle_inputs() {
         // fullscreen toggle via F11
-        if (Keys::pressed(SDLK_F11)) _window.toggle_fullscreen();
+        if (Keys::pressed(SDLK_F11)) {
+            _window.toggle_fullscreen();
+            _swapchain._resize_requested = true;
+        }
         // handle mouse capture
         if (!Keys::down(SDLK_LALT) && Mouse::pressed(Mouse::ids::left) && !SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(true);
         if (Keys::pressed(SDLK_LALT) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);

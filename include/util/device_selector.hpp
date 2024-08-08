@@ -49,7 +49,7 @@ struct DeviceSelector {
                         memory_size += heap.size;
                     }
                 }
-                if (props.deviceType == _preferred_device_type) memory_size += 1ull << 63;
+                if (props.deviceType == _preferred_device_type) memory_size += 1ull << 63ull;
                 matching_devices.emplace_back(device, memory_size);
             }
         }

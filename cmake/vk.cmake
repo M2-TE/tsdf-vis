@@ -20,7 +20,7 @@ FILE(WRITE "${VALIDATION_LAYER_OVERRIDE_FOLDER}/vk_layer_settings.txt"
 "# on by default:
 khronos_validation.validate_core = true
 khronos_validation.thread_safety = true
-khronos_validation.validate_best_practices = false
+khronos_validation.validate_best_practices = true
 khronos_validation.validate_best_practices_arm = true
 khronos_validation.validate_best_practices_amd = true
 khronos_validation.validate_best_practices_img = true
@@ -34,5 +34,5 @@ khronos_validation.gpuav_debug_validate_instrumented_shaders = true
 khronos_validation.report_flags = info,warn,error")
 
 # optimally, both of these should be enabled:
-# khronos_validation.validate_best_practices = false
+# khronos_validation.validate_best_practices = true
 # khronos_validation.report_flags = info,warn,error,perf")
