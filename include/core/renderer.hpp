@@ -77,7 +77,7 @@ public:
         device.resetCommandPool(_command_pool, {});
         vk::CommandBuffer cmd = _command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        execute_pipes(device, cmd, scene);
+        execute_pipes(cmd, scene);
         if (_smaa_enabled) execute_smaa(cmd);
         cmd.end();
         
@@ -245,7 +245,8 @@ private:
         _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _color);
         _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _smaa_blend);
     }
-    void execute_pipes(vk::Device device, vk::CommandBuffer cmd, Scene& scene) {
+    
+    void execute_pipes(vk::CommandBuffer cmd, Scene& scene) {
         // draw scan points
         Image::TransitionInfo info_transition;
         info_transition = {
@@ -271,57 +272,57 @@ private:
         _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
     }
     void execute_smaa(vk::CommandBuffer cmd) {
-        // // SMAA edge detection
-        // Image::TransitionInfo info_transition;
-        // info_transition = { // input
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-        //     .dst_access = vk::AccessFlagBits2::eShaderSampledRead
-        // };
-        // _color.transition_layout(info_transition);
-        // info_transition = { // output
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        // };
-        // _smaa_edges.transition_layout(info_transition);
-        // _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
+        // SMAA edge detection
+        Image::TransitionInfo info_transition;
+        info_transition = { // input
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
+        };
+        _color.transition_layout(info_transition);
+        info_transition = { // output
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _smaa_edges.transition_layout(info_transition);
+        _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
 
-        // // SMAA blending weight calculation
-        // info_transition = { // input
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-        //     .dst_access = vk::AccessFlagBits2::eShaderSampledRead
-        // };
-        // _smaa_edges.transition_layout(info_transition);
-        // info_transition = { // output
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        // };
-        // _smaa_blend.transition_layout(info_transition);
-        // _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
+        // SMAA blending weight calculation
+        info_transition = { // input
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
+        };
+        _smaa_edges.transition_layout(info_transition);
+        info_transition = { // output
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _smaa_blend.transition_layout(info_transition);
+        _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
 
-        // // SMAA neighborhood blending
-        // info_transition = { // input
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
-        //     .dst_access = vk::AccessFlagBits2::eShaderSampledRead
-        // };
-        // _smaa_blend.transition_layout(info_transition);
-        // info_transition = { // output
-        //     .cmd = cmd,
-        //     .new_layout = vk::ImageLayout::eAttachmentOptimal,
-        //     .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        //     .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
-        // };
-        // _smaa_output.transition_layout(info_transition);
-        // _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
+        // SMAA neighborhood blending
+        info_transition = { // input
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
+            .dst_access = vk::AccessFlagBits2::eShaderSampledRead
+        };
+        _smaa_blend.transition_layout(info_transition);
+        info_transition = { // output
+            .cmd = cmd,
+            .new_layout = vk::ImageLayout::eAttachmentOptimal,
+            .dst_stage = vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+            .dst_access = vk::AccessFlagBits2::eColorAttachmentWrite
+        };
+        _smaa_output.transition_layout(info_transition);
+        _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
     }
 
 private:
@@ -343,7 +344,7 @@ private:
     Image _smaa_edges; // intermediate SMAA output
     Image _smaa_blend; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
-    bool _smaa_enabled = false;
+    bool _smaa_enabled = true;
 
     // pipelines
     Pipeline::Graphics _pipe_default;

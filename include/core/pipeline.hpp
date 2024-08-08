@@ -358,7 +358,7 @@ namespace Pipeline
 		
 		// draw fullscreen mesh using oversized triangle
 		void execute(vk::CommandBuffer cmd,
-			Image& color_dst,  vk::AttachmentLoadOp color_load)
+			Image& color_dst, vk::AttachmentLoadOp color_load)
 		{
 			vk::RenderingAttachmentInfo info_color_attach {
 				.imageView = color_dst._view,
