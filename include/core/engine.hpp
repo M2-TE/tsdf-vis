@@ -27,7 +27,7 @@ public:
         DeviceSelector device_selector {
             ._required_major = 1,
             ._required_minor = 3,
-            ._preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu,
+            ._preferred_device_type = vk::PhysicalDeviceType::eIntegratedGpu,
             ._required_extensions {
                 vk::KHRSwapchainExtensionName,
                 // vk::KHRDynamicRenderingLocalReadExtensionName,
@@ -89,7 +89,6 @@ public:
         // create renderer components
         DepthStencil::set_format(_phys_device);
         _queues.init(_device, queue_mappings);
-        _camera.init(_vmalloc, _queues._universal_i, _window.size());
         _swapchain._resize_requested = true;
         
         // initialize imgui backend
@@ -108,7 +107,6 @@ public:
         _scene.destroy(_vmalloc);
         //
         ImGui::impl::shutdown(_device);
-        _camera.destroy(_vmalloc);
         _renderer.destroy(_device, _vmalloc);
         _swapchain.destroy(_device);
         _queues.destroy(_device);
@@ -142,9 +140,9 @@ public:
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
 
-        // forced to wait as camera buffer currently doesnt support multiple frames
+        _scene.update_safe(_vmalloc);
         _renderer.wait(_device);
-        update();
+        _scene.update(_vmalloc);
         _renderer.render(_device, _swapchain, _queues, _scene);
         Input::flush();
     }
@@ -154,12 +152,9 @@ private:
         _device.waitIdle();
         SDL_SyncWindow(_window._window_p);
         
-        _camera.resize(_window.size());
-        _renderer.resize(_device, _vmalloc, _queues, _window.size(), _camera);
+        _scene._camera.resize(_window.size());
+        _renderer.resize(_device, _vmalloc, _queues, _window.size(), _scene._camera);
         _swapchain.resize(_phys_device, _device, _window, _queues);
-    }
-    void update() {
-        _camera.update(_vmalloc);
     }
     void handle_inputs() {
         // fullscreen toggle via F11
@@ -186,6 +181,5 @@ private:
     Queues _queues;
     Swapchain _swapchain;
     Renderer _renderer;
-    Camera _camera;
     Scene _scene;
 };

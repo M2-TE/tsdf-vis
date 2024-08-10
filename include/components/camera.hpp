@@ -10,7 +10,7 @@ struct Camera {
 	struct BufferData {
 		glm::mat4x4 matrix;
 	};
-    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, vk::Extent2D extent) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
         // create camera matrix buffer
 		vk::BufferCreateInfo info_buffer {
 			.size = sizeof(BufferData),	
@@ -39,9 +39,6 @@ struct Camera {
 		else _require_staging = true;
 		if (props & vk::MemoryPropertyFlagBits::eHostCoherent) _require_flushing = false;
 		else _require_flushing = true;
-		
-		// initialize camera size
-		resize(extent);
     }
     void destroy(vma::Allocator vmalloc) {
 		vmalloc.unmapMemory(_allocation);

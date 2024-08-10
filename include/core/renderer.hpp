@@ -6,6 +6,7 @@
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"
 #include "core/pipeline.hpp"
+#include "core/smaa.hpp"
 #include "components/image.hpp"
 #include "components/camera.hpp"
 #include "components/scene.hpp"
@@ -156,7 +157,8 @@ private:
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_search_tex.init(info_image);
-        _smaa_search_tex.load_texture(device, vmalloc, queues, std::span(reinterpret_cast<const std::byte*>(searchTexBytes), sizeof(searchTexBytes)));
+        auto search_span = smaa::get_search_tex();
+        _smaa_search_tex.load_texture(device, vmalloc, queues, search_span);
         info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8G8Unorm,
@@ -164,7 +166,8 @@ private:
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_area_tex.init(info_image);
-        _smaa_area_tex.load_texture(device, vmalloc, queues, std::span(reinterpret_cast<const std::byte*>(areaTexBytes), sizeof(areaTexBytes)));
+        auto area_span = smaa::get_area_tex();
+        _smaa_area_tex.load_texture(device, vmalloc, queues, area_span);
         // transition smaa textures to their permanent layouts
         vk::CommandBuffer cmd = queues.oneshot_begin(device);
         Image::TransitionInfo info_transition {
@@ -266,10 +269,10 @@ private:
         _pipe_default.execute(cmd, scene._ply._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
 
         // draw points
-        _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+        // _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
         
         // draw cells
-        _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+        // _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
     }
     void execute_smaa(vk::CommandBuffer cmd) {
         // SMAA edge detection
@@ -344,7 +347,7 @@ private:
     Image _smaa_edges; // intermediate SMAA output
     Image _smaa_blend; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
-    bool _smaa_enabled = true;
+    bool _smaa_enabled = false;
 
     // pipelines
     Pipeline::Graphics _pipe_default;
