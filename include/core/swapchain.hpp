@@ -1,4 +1,6 @@
 #pragma once
+#include <chrono>
+#include <thread>
 #include <vulkan/vulkan.hpp>
 #include "core/window.hpp"
 #include "core/queues.hpp"
@@ -110,6 +112,15 @@ public:
         _images.clear();
     }
     
+    void set_unlimited_framerate() {
+        _target_frame_time = std::chrono::nanoseconds(static_cast<int64_t>(0));
+    }
+    void set_target_framerate(std::size_t fps) {
+        double fps_d = (double)fps;
+        double ms = 1.0 / fps_d * 1000.0;
+        double ns = ms * 1000000.0;
+        _target_frame_time = std::chrono::nanoseconds(static_cast<int64_t>(ns));
+    }
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) {
         destroy(device);
         init(physDevice, device, window, queues);
@@ -131,7 +142,7 @@ public:
         device.resetCommandPool(frame._command_pool);
         vk::CommandBuffer cmd = frame._command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
-        // draw_imgui(cmd, src_image);
+        draw_imgui(cmd, src_image);
         draw_swapchain(cmd, src_image, swap_index);
         // transition swapchain image into presentation layout
         Image::TransitionInfo info_transition {
@@ -169,6 +180,7 @@ public:
             .pSwapchains = &_swapchain,
             .pImageIndices = &swap_index  
         };
+        wait_target_framerate();
         vk::Result result = _presentation_queue.presentKHR(presentInfo);
         if (result == vk::Result::eErrorOutOfDateKHR) _resize_requested = true;
     }
@@ -202,7 +214,17 @@ private:
         _images[swap_index].transition_layout(info_transition);
         _images[swap_index].blit(cmd, src_image);
     }
+    void wait_target_framerate() {
+        // keep track of how much time passed since last frame was presented
+        auto new_timestamp = std::chrono::high_resolution_clock::now();
+        std::chrono::nanoseconds diff = new_timestamp - _timestamp;
 
+        // figure out if and how long needs to be waited
+        if (_target_frame_time > diff) {
+            std::this_thread::sleep_for(_target_frame_time - diff);
+        }
+        _timestamp = std::chrono::high_resolution_clock::now();
+    }
 public:
     vk::SwapchainKHR _swapchain;
     std::vector<Image> _images;
@@ -213,4 +235,6 @@ public:
 private:
     std::vector<SyncFrame> _sync_frames;
     uint32_t _sync_frame_i = 0;
+    std::chrono::duration<int64_t, std::nano> _target_frame_time;
+    std::chrono::time_point<std::chrono::high_resolution_clock> _timestamp;
 };

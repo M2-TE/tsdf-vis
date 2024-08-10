@@ -89,6 +89,7 @@ public:
         // create renderer components
         DepthStencil::set_format(_phys_device);
         _queues.init(_device, queue_mappings);
+        _swapchain.set_target_framerate(120);
         _swapchain._resize_requested = true;
         
         // initialize imgui backend
