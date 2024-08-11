@@ -1,6 +1,6 @@
 #pragma once
-#include "components/vertices.hpp"
-#include "components/indices.hpp"
+#include "components/mesh/vertices.hpp"
+#include "components/mesh/indices.hpp"
 
 template<typename Vertex, typename Index = uint16_t> 
 struct Mesh {

@@ -2,7 +2,7 @@
 #include <string_view>
 #include <vulkan/vulkan.hpp>
 #include <fmt/core.h>
-#include "components/mesh.hpp"
+#include "components/mesh/mesh.hpp"
 #include "components/image.hpp"
 
 namespace Pipeline

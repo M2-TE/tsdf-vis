@@ -7,9 +7,9 @@
 #include <vk_mem_alloc.hpp>
 #include <fmt/core.h>
 #include <glm/glm.hpp>
-#include "components/mesh.hpp"
-#include "components/vertices.hpp"
-#include "components/indices.hpp"
+#include "components/mesh/mesh.hpp"
+#include "components/mesh/vertices.hpp"
+#include "components/mesh/indices.hpp"
 
 struct Grid {
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path) {

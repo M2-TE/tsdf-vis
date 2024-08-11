@@ -8,7 +8,6 @@
 #include "core/pipeline.hpp"
 #include "core/smaa.hpp"
 #include "components/image.hpp"
-#include "components/camera.hpp"
 #include "components/scene.hpp"
 
 class Renderer {

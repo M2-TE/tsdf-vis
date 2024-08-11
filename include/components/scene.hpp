@@ -1,6 +1,6 @@
 #pragma once
-#include "components/camera.hpp"
-#include "components/mesh_pool.hpp"
+#include "components/transform/camera.hpp"
+#include "components/mesh/mesh_pool.hpp"
 #include "extra/grid.hpp"
 #include "extra/plymesh.hpp"
 
