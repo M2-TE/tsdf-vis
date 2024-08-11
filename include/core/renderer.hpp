@@ -11,11 +11,6 @@
 #include "components/camera.hpp"
 #include "components/scene.hpp"
 
-// temporary stuff for SMAA
-#include "AreaTex.h"
-#include "SearchTex.h"
-
-// todo: remove timeline semaphore from vulkan features
 class Renderer {
 public:
     void init(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent, Camera& camera) {
@@ -153,21 +148,19 @@ private:
         info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8Unorm,
-            .extent { SEARCHTEX_WIDTH, SEARCHTEX_HEIGHT, 1 },
+            .extent = smaa::get_search_extent(),
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_search_tex.init(info_image);
-        auto search_span = smaa::get_search_tex();
-        _smaa_search_tex.load_texture(device, vmalloc, queues, search_span);
+        _smaa_search_tex.load_texture(device, vmalloc, queues, smaa::get_search_tex());
         info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8G8Unorm,
-            .extent { AREATEX_WIDTH, AREATEX_HEIGHT, 1 },
+            .extent = smaa::get_area_extent(),
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_area_tex.init(info_image);
-        auto area_span = smaa::get_area_tex();
-        _smaa_area_tex.load_texture(device, vmalloc, queues, area_span);
+        _smaa_area_tex.load_texture(device, vmalloc, queues, smaa::get_area_tex());
         // transition smaa textures to their permanent layouts
         vk::CommandBuffer cmd = queues.oneshot_begin(device);
         Image::TransitionInfo info_transition {
