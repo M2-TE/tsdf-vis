@@ -27,7 +27,7 @@ public:
         DeviceSelector device_selector {
             ._required_major = 1,
             ._required_minor = 3,
-            ._preferred_device_type = vk::PhysicalDeviceType::eIntegratedGpu,
+            ._preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu,
             ._required_extensions {
                 vk::KHRSwapchainExtensionName,
                 // vk::KHRDynamicRenderingLocalReadExtensionName,
@@ -85,11 +85,10 @@ public:
         };
         _vmalloc = vma::createAllocator(info_vmalloc);
 
-        
         // create renderer components
         DepthStencil::set_format(_phys_device);
         _queues.init(_device, queue_mappings);
-        _swapchain.set_target_framerate(120);
+        _swapchain.set_target_framerate(0);
         _swapchain._resize_requested = true;
         
         // initialize imgui backend

@@ -112,13 +112,13 @@ public:
         _images.clear();
     }
     
-    void set_unlimited_framerate() {
-        _target_frame_time = std::chrono::nanoseconds(static_cast<int64_t>(0));
-    }
     void set_target_framerate(std::size_t fps) {
-        double fps_d = (double)fps;
-        double ms = 1.0 / fps_d * 1000.0;
-        double ns = ms * 1000000.0;
+        double ns = 0;
+        if (fps > 0) {
+            double fps_d = (double)fps;
+            double ms = 1.0 / fps_d * 1000.0;
+            ns = ms * 1000000.0;
+        }
         _target_frame_time = std::chrono::nanoseconds(static_cast<int64_t>(ns));
     }
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) {

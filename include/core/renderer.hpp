@@ -75,7 +75,7 @@ public:
         execute_pipes(cmd, scene);
         if (_smaa_enabled) execute_smaa(cmd);
         cmd.end();
-        
+
         // submit command buffer
         vk::PipelineStageFlags wait_stage = vk::PipelineStageFlagBits::eTopOfPipe;
         vk::SubmitInfo info_submit {
