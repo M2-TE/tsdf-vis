@@ -20,7 +20,6 @@ struct Scene {
 
     // update without affecting current frames in flight
     void update_safe(vma::Allocator vmalloc) {
-
     }
     // update after buffers are no longer being read
     void update(vma::Allocator vmalloc) {
