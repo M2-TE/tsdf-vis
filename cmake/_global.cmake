@@ -1,17 +1,28 @@
 # policies
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW) # disallow option() from overwriting set()
 
-# Generic CMake Settings
+# c/cxx settings
 set(CMAKE_C_STANDARD   17)
-set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD_REQUIRED   ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS   OFF)
+list(APPEND CMAKE_C_FLAGS "-march=native")
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+list(APPEND CMAKE_CXX_FLAGS "-march=native")
+
+# cmake settings
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BUILD_SHARED_LIBS OFF)
 set(BUILD_TESTS OFF)
+
+# IPO/LTO support
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT CMAKE_INTERPROCEDURAL_OPTIMIZATION LANGUAGES CXX)
+message(STATUS "IPO/LTO enabled: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
+
 # other
 set(STRICT_COMPILATION OFF)
 set(CROSS_PLATFORM_DETERMINISTIC OFF)
@@ -41,17 +52,17 @@ elseif(UNIX)
     # enable mold linker if present
     find_program(MOLD_FOUND mold)
     if (${MOLD_FOUND} STREQUAL "MOLD_FOUND-NOTFOUND")
-        message("Linker: mold not found, falling back to standard linker")
+        message(STATUS "Linker: mold not found, falling back to standard linker")
     else()
-        message("Linker: mold found")
+        message(STATUS "Linker: mold found")
         set(CMAKE_LINKER_TYPE MOLD)
     endif() 
     # enable ccache if present
     find_program(CCACHE_FOUND ccache)
     if (${CCACHE_FOUND} STREQUAL "CCACHE_FOUND-NOTFOUND")
-        message("Compiler: ccache not found, falling back to standard compiler")
+        message(STATUS "Compiler: ccache not found, falling back to standard compiler")
     else()
-        message("Compiler: ccache found")
+        message(STATUS "Compiler: ccache found")
         set(CMAKE_C_COMPILER_LAUNCHER ccache)
         set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
     endif()
@@ -69,12 +80,4 @@ elseif(UNIX)
 		endif()
 	endif()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-endif()
-
-if (false)
-    # check for IPO/LTO support
-    set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT CMAKE_INTERPROCEDURAL_OPTIMIZATION LANGUAGES C CXX)
-    message(STATUS "IPO/LTO enabled: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
 endif()

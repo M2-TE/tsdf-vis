@@ -5,7 +5,7 @@
 //
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <glm/glm.hpp>
 #include "components/mesh/mesh.hpp"
 #include "components/mesh/vertices.hpp"

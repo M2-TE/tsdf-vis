@@ -2,7 +2,7 @@
 #include <set>
 #include <bit>
 #include <vulkan/vulkan.hpp>
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 struct DeviceSelector {
     auto select_physical_device(vk::Instance instance, vk::SurfaceKHR surface = nullptr) -> vk::PhysicalDevice {

@@ -3,7 +3,7 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include "core/input.hpp"
 
 struct Camera {

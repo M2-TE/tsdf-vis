@@ -4,7 +4,7 @@
 #include <SDL3/SDL_events.h>
 #include <backends/imgui_impl_sdl3.h>
 #include <backends/imgui_impl_vulkan.h>
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 namespace ImGui 
 {

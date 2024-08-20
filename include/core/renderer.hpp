@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <cmath>
 #include <vulkan/vulkan.hpp>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"
 #include "core/pipeline.hpp"

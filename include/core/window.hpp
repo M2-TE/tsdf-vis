@@ -3,7 +3,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.hpp>
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 struct Window {
     auto init(int width, int height, std::string name) -> vk::Instance {
