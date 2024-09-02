@@ -12,7 +12,7 @@
 
 namespace Input {
 	struct Data {
-		static auto get() noexcept -> Data& { 
+		auto static get() noexcept -> Data& { 
             static Data instance;
             return instance;
         }
@@ -24,44 +24,46 @@ namespace Input {
 		std::set<uint8_t> buttons_released;
 		float x, y;
 		float dx, dy;
+		bool mouse_captured;
 	};
 
 	struct Keys {
-        static inline bool pressed (std::string_view characters) noexcept {
+        bool static inline pressed (std::string_view characters) noexcept {
             for (auto cur = characters.cbegin(); cur < characters.cend(); cur++) {
                 if (pressed(*cur)) return true;
             }
             return false;
         }
-		static inline bool pressed(char character) noexcept { return Data::get().keys_pressed.contains(character) || Data::get().keys_pressed.contains(character + 32); }
-		static inline bool pressed(SDL_Keycode code) noexcept { return Data::get().keys_pressed.contains(code); }
-        static inline bool down(std::string_view characters) noexcept {
+		bool static inline pressed(char character) noexcept { return Data::get().keys_pressed.contains(character) || Data::get().keys_pressed.contains(character + 32); }
+		bool static inline pressed(SDL_Keycode code) noexcept { return Data::get().keys_pressed.contains(code); }
+        bool static inline down(std::string_view characters) noexcept {
             for (auto cur = characters.cbegin(); cur < characters.cend(); cur++) {
                 if (down(*cur)) return true;
             }
             return false;
         }
-		static inline bool down(char character) noexcept { return Data::get().keys_down.contains(character) || Data::get().keys_pressed.contains(character + 32); }
-		static inline bool down(SDL_Keycode code) noexcept { return Data::get().keys_down.contains(code); }
-        static inline bool released(std::string_view characters) noexcept {
+		bool static inline down(char character) noexcept { return Data::get().keys_down.contains(character) || Data::get().keys_pressed.contains(character + 32); }
+		bool static inline down(SDL_Keycode code) noexcept { return Data::get().keys_down.contains(code); }
+        bool static inline released(std::string_view characters) noexcept {
             for (auto cur = characters.cbegin(); cur < characters.cend(); cur++) {
                 if (released(*cur)) return true;
             }
             return false;
         }
-		static inline bool released(char character) noexcept { return Data::get().keys_released.contains(character) || Data::get().keys_pressed.contains(character + 32); }
-		static inline bool released(SDL_Keycode code) noexcept { return Data::get().keys_released.contains(code); }
+		bool static inline released(char character) noexcept { return Data::get().keys_released.contains(character) || Data::get().keys_pressed.contains(character + 32); }
+		bool static inline released(SDL_Keycode code) noexcept { return Data::get().keys_released.contains(code); }
     };
 	struct Mouse {
 		struct ids { static constexpr uint8_t left = SDL_BUTTON_LEFT, right = SDL_BUTTON_RIGHT, middle = SDL_BUTTON_MIDDLE; };
-		static inline bool pressed(uint8_t button_id) noexcept { return Data::get().buttons_pressed.contains(button_id); }
-		static inline bool down(uint8_t button_id) noexcept { return Data::get().buttons_down.contains(button_id); }
-		static inline bool released(uint8_t button_id) noexcept { return Data::get().buttons_released.contains(button_id); }
-		static inline auto position() noexcept -> std::pair<decltype(Data::x), decltype(Data::y)> { return std::pair(Data::get().x, Data::get().y); };
-		static inline auto delta() noexcept -> std::pair<decltype(Data::dx), decltype(Data::dy)> { return std::pair(Data::get().dx, Data::get().dy); };
+		bool static inline pressed(uint8_t button_id) noexcept { return Data::get().buttons_pressed.contains(button_id); }
+		bool static inline down(uint8_t button_id) noexcept { return Data::get().buttons_down.contains(button_id); }
+		bool static inline released(uint8_t button_id) noexcept { return Data::get().buttons_released.contains(button_id); }
+		auto static inline position() noexcept -> std::pair<decltype(Data::x), decltype(Data::y)> { return std::pair(Data::get().x, Data::get().y); };
+		auto static inline delta() noexcept -> std::pair<decltype(Data::dx), decltype(Data::dy)> { return std::pair(Data::get().dx, Data::get().dy); };
+		bool static inline captured() noexcept { return Data::get().mouse_captured; }
 	};
 	
-    static void flush() noexcept {
+    void static flush() noexcept {
 		Data::get().keys_pressed.clear();
 		Data::get().keys_released.clear();
 		Data::get().buttons_pressed.clear();
@@ -69,36 +71,39 @@ namespace Input {
 		Data::get().dx = 0;
 		Data::get().dy = 0;
 	}
-	static void flush_all() noexcept {
+	void static flush_all() noexcept {
 		flush();
 		Data::get().keys_down.clear();
 		Data::get().buttons_down.clear();
 	}
-	static void register_key_up(const SDL_KeyboardEvent& key_event) noexcept {
+	void static register_key_up(const SDL_KeyboardEvent& key_event) noexcept {
 		if (key_event.repeat || IMGUI_CAPTURE_EVAL) return;
 		Data::get().keys_released.insert(key_event.key);
 		Data::get().keys_down.erase(key_event.key);
 	}
-	static void register_key_down(const SDL_KeyboardEvent& key_event) noexcept {
+	void static register_key_down(const SDL_KeyboardEvent& key_event) noexcept {
 		if (key_event.repeat || IMGUI_CAPTURE_EVAL) return;
 		Data::get().keys_pressed.insert(key_event.key);
 		Data::get().keys_down.insert(key_event.key);
 	}
-	static void register_button_up(const SDL_MouseButtonEvent& button_event) noexcept {
+	void static register_button_up(const SDL_MouseButtonEvent& button_event) noexcept {
 		// if (IMGUI_CAPTURE_EVAL) return;
 		Data::get().buttons_released.insert(button_event.button);
 		Data::get().buttons_down.erase(button_event.button);
 	}
-	static void register_button_down(const SDL_MouseButtonEvent& button_event) noexcept {
+	void static register_button_down(const SDL_MouseButtonEvent& button_event) noexcept {
 		// if (IMGUI_CAPTURE_EVAL) return;
 		Data::get().buttons_pressed.insert(button_event.button);
 		Data::get().buttons_down.insert(button_event.button);
 	}
-	static void register_motion(const SDL_MouseMotionEvent& motion_event) noexcept {
+	void static register_motion(const SDL_MouseMotionEvent& motion_event) noexcept {
 		Data::get().dx += motion_event.xrel;
 		Data::get().dy += motion_event.yrel;
 		Data::get().x += motion_event.xrel;
 		Data::get().y += motion_event.yrel;
+	}
+	void static register_capture(bool capture_state) noexcept {
+		Data::get().mouse_captured = capture_state;
 	}
 }
 #undef IMGUI_CAPTURE_EVAL

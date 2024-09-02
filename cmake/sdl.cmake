@@ -12,7 +12,7 @@ set(SDL_DIRECTX  OFF)
 set(SDL_OPENGL   OFF)
 set(SDL_OPENGLES OFF)
 
-FetchContent_Declare(sdl3 GIT_REPOSITORY "https://github.com/libsdl-org/SDL.git" GIT_TAG "0fe660374741b05ca551b93fccc17d475643c74d" GIT_SHALLOW OFF) # disabled shallow because of git tag hash usage
+FetchContent_Declare(sdl3 GIT_REPOSITORY "https://github.com/libsdl-org/SDL.git" GIT_TAG "d1739ce3a826bbae22f88d8fba70462499f3734c" GIT_SHALLOW OFF) # disabled shallow because of git tag hash usage
 FetchContent_MakeAvailable(sdl3)
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE "${sdl3_SOURCE_DIR}/include")
 if (SDL_SHARED)

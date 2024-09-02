@@ -64,7 +64,7 @@ struct Camera {
 		if (Keys::down('e')) _pos += q_rot * glm::vec3(0, -speed, 0);
 
 		// only control camera when mouse is captured
-		if (SDL_GetRelativeMouseMode()) {
+		if (Mouse::captured()) {
 			_rot += glm::vec3(-Mouse::delta().second, +Mouse::delta().first, 0) * 0.005f;
 		}
 

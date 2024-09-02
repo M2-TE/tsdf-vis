@@ -163,10 +163,11 @@ private:
             _swapchain._resize_requested = true;
         }
         // handle mouse capture
-        if (!Keys::down(SDLK_LALT) && Mouse::pressed(Mouse::ids::left) && !SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(true);
-        if (Keys::pressed(SDLK_LALT) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);
-        if (Keys::released(SDLK_LALT) && !SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(true);
-        if (Keys::pressed(SDLK_ESCAPE) && SDL_GetRelativeMouseMode()) SDL_SetRelativeMouseMode(false);
+        if (!Keys::down(SDLK_LALT) && Mouse::pressed(Mouse::ids::left) && !Mouse::captured()) SDL_SetWindowRelativeMouseMode(_window._window_p, true);
+        if (Keys::pressed(SDLK_LALT) && Mouse::captured()) SDL_SetWindowRelativeMouseMode(_window._window_p, false);
+        if (Keys::released(SDLK_LALT) && !Mouse::captured()) SDL_SetWindowRelativeMouseMode(_window._window_p, true);
+        if (Keys::pressed(SDLK_ESCAPE) && Mouse::captured()) SDL_SetWindowRelativeMouseMode(_window._window_p, false);
+        Input::register_capture(SDL_GetWindowRelativeMouseMode(_window._window_p));
     }
     
 public:

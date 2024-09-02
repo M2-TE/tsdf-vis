@@ -181,8 +181,13 @@ public:
             .pImageIndices = &swap_index  
         };
         wait_target_framerate();
-        vk::Result result = _presentation_queue.presentKHR(presentInfo);
-        if (result == vk::Result::eErrorOutOfDateKHR) _resize_requested = true;
+        try {
+            vk::Result result = _presentation_queue.presentKHR(presentInfo);
+        }
+        catch (const vk::OutOfDateKHRError& e) {
+            fmt::println("swapchain out of date");
+            _resize_requested = true;
+        }
     }
 
 private:
