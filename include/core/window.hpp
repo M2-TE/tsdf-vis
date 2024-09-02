@@ -8,7 +8,7 @@
 struct Window {
     auto init(int width, int height, std::string name) -> vk::Instance {
         // SDL: init video subsystem for render surfaces
-        if (SDL_InitSubSystem(SDL_INIT_VIDEO)) fmt::println("{}", SDL_GetError());
+        if (SDL_InitSubSystem(SDL_INIT_VIDEO) == SDL_FALSE) fmt::println("{}", SDL_GetError());
         
         // SDL: create window
         _window_p = SDL_CreateWindow(name.c_str(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -83,12 +83,16 @@ struct Window {
     
     void toggle_fullscreen() {
         _fullscreen = !_fullscreen;
-        SDL_SetWindowFullscreen(_window_p, _fullscreen);
+        if (SDL_SetWindowFullscreen(_window_p, _fullscreen) == SDL_FALSE) {
+            fmt::println("{}", SDL_GetError());
+        }
     }
     auto size() -> vk::Extent2D {
         int width = 0;
         int height = 0;
-        if (SDL_GetWindowSizeInPixels(_window_p, &width, &height)) fmt::println("{}", SDL_GetError());
+        if (SDL_GetWindowSizeInPixels(_window_p, &width, &height) == SDL_FALSE) {
+            fmt::println("{}", SDL_GetError());
+        }
         return vk::Extent2D((uint32_t)width, (uint32_t)height);
     }
 

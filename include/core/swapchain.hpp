@@ -183,6 +183,9 @@ public:
         wait_target_framerate();
         try {
             vk::Result result = _presentation_queue.presentKHR(presentInfo);
+            if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+                throw vk::OutOfDateKHRError("swapchain out of date");
+            }
         }
         catch (const vk::OutOfDateKHRError& e) {
             fmt::println("swapchain out of date");
