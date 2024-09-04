@@ -16,31 +16,15 @@ struct Grid {
 		std::ifstream file;
 		file.open(path.data(), std::ifstream::binary);
         if (file.good()) {
+            // read header
             float voxelsize = 0;
-            std::size_t scan_points_n = 0;
             std::size_t query_points_n = 0;
             std::size_t cells_n = 0;
-			
 			file.read(reinterpret_cast<char*>(&voxelsize), sizeof(float));
-			file.read(reinterpret_cast<char*>(&scan_points_n), sizeof(std::size_t));
 			file.read(reinterpret_cast<char*>(&query_points_n), sizeof(std::size_t));
 			file.read(reinterpret_cast<char*>(&cells_n), sizeof(std::size_t));
+            fmt::println("voxelsize of: {} with {} query points and {} cells", voxelsize, query_points_n, cells_n);
             
-            // read header
-            fmt::println("voxelsize of: {} with {} scan points, {} query points and {} cells", voxelsize, scan_points_n, query_points_n, cells_n);
-            
-            // alloc and read scan points
-			std::vector<glm::vec3> scan_points;
-            scan_points.reserve(scan_points_n);
-            for (std::size_t i = 0; i < scan_points_n; i++) {
-                glm::vec3 scan_point;
-				file.read(reinterpret_cast<char*>(&scan_point), sizeof(glm::vec3));
-                std::swap(scan_point.y, scan_point.z);
-                scan_point.y *= -1.0;
-                scan_points.push_back(scan_point);
-            }
-			_scan_points.init(vmalloc, queues, scan_points);
-
 			// alloc and read query points
 			std::vector<QueryPoint> query_points;
             query_points.reserve(query_points_n);
@@ -85,14 +69,11 @@ struct Grid {
         }
     }
     void destroy(vma::Allocator vmalloc) {
-		_scan_points.destroy(vmalloc);
 		_query_points.destroy(vmalloc);
     }
     
 public:
     typedef uint32_t Index;
-    typedef glm::vec3 ScanPoint;
     typedef std::pair<glm::vec3, float> QueryPoint;
-    Mesh<ScanPoint> _scan_points; // loose points
     Mesh<QueryPoint, Index> _query_points; // indexed line list
 };
