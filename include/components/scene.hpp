@@ -1,25 +1,38 @@
 #pragma once
+#include <fmt/format.h>
 #include "components/transform/camera.hpp"
-// #include "components/mesh/mesh_pool.hpp"
 #include "extra/grid.hpp"
 #include "extra/plymesh.hpp"
 
 struct Scene {
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
         _camera.init(vmalloc, queues);
-        // _mesh_pool.init(vmalloc, queues);
-        _grid.init(vmalloc, queues, "data/hsfd.grid");
-        _ply.init(vmalloc, queues, "data/hsfd.ply");
+        _grid.init(vmalloc, queues, "data/mesh.grid");
+        _mesh_main.init(vmalloc, queues, "data/mesh.ply");
+        for (size_t i = 0; i < 5; i++) {
+            _mesh_subs.emplace_back();
+            _mesh_subs.back().init(vmalloc, queues, std::format("data/mesh_{}.ply", i));
+        }
     }
     void destroy(vma::Allocator vmalloc) {
         _camera.destroy(vmalloc);
-        // _mesh_pool.destroy(vmalloc);
         _grid.destroy(vmalloc);
-        _ply.destroy(vmalloc);
+        _mesh_main.destroy(vmalloc);
+        for (auto& mesh: _mesh_subs) {
+            mesh.destroy(vmalloc);
+        }
     }
 
     // update without affecting current frames in flight
     void update_safe(vma::Allocator vmalloc) {
+        ImGui::Begin("subtree index");
+        ImGui::Text("subtree index :%d", _mesh_sub_i);
+        ImGui::End();
+
+        // go to next subtree
+        if (Keys::pressed(SDLK_RIGHT)) {
+            _mesh_sub_i = (_mesh_sub_i + 1) % _mesh_subs.size();
+        }
     }
     // update after buffers are no longer being read
     void update(vma::Allocator vmalloc) {
@@ -27,7 +40,8 @@ struct Scene {
     }
 
     Camera _camera;
-    // MeshPool _mesh_pool;
     Grid _grid;
-    Plymesh _ply;
+    Plymesh _mesh_main;
+    uint32_t _mesh_sub_i = 0;
+    std::vector<Plymesh> _mesh_subs;
 };
