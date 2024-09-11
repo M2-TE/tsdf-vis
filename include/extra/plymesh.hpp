@@ -1,7 +1,7 @@
 #pragma once
 
 struct Plymesh {
-    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path, std::optional<glm::vec3> color = std::nullopt) {
         std::ifstream file;
 		file.open(path.data(), std::ifstream::binary);
         if (file.good()) {
@@ -50,9 +50,10 @@ struct Plymesh {
             std::vector<Vertex> vertices;
             vertices.reserve(vert_n);
             for (auto& vertex: raw_vertices) {
-                glm::vec3 pos { vertex.first.x, -vertex.first.z, vertex.first.y };
-                glm::vec3 norm { vertex.second.x, vertex.second.y, vertex.second.z };
-                vertices.emplace_back(pos, norm);
+                glm::vec4 pos { vertex.first.x, -vertex.first.z, vertex.first.y, 1 };
+                glm::vec4 norm { vertex.second.x, vertex.second.y, vertex.second.z, 0 };
+                glm::vec4 col = color.has_value() ? glm::vec4(color.value(), 1) : norm;
+                vertices.emplace_back(pos, norm, col);
             }
 
             // read little endian faces into indices
@@ -78,7 +79,11 @@ struct Plymesh {
         _mesh.destroy(vmalloc);
     }
 
-    typedef std::pair<glm::vec3, glm::vec3> Vertex;
+    struct Vertex {
+        glm::vec4 pos;
+        glm::vec4 norm;
+        glm::vec4 color;
+    };
     typedef uint32_t Index;
     Mesh<Vertex, Index> _mesh;
 };
