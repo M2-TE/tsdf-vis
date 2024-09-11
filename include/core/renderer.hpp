@@ -258,8 +258,8 @@ private:
             .dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         };
         _depth_stencil.transition_layout(info_transition);
-        // _pipe_default.execute(cmd, scene._mesh_main._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
-        _pipe_default.execute(cmd, scene._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
+        _pipe_default.execute(cmd, scene._mesh_main._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
+        _pipe_default.execute(cmd, scene._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eClear);
 
         // draw points
         // _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);

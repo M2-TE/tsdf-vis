@@ -1,4 +1,5 @@
 #pragma once
+#include <random>
 #include <fmt/format.h>
 #include "components/transform/camera.hpp"
 #include "extra/grid.hpp"
@@ -9,9 +10,14 @@ struct Scene {
         _camera.init(vmalloc, queues);
         _grid.init(vmalloc, queues, "data/mesh.grid");
         _mesh_main.init(vmalloc, queues, "data/mesh.ply");
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dis(0.0, 1.0);
         for (size_t i = 0; i < 5; i++) {
             _mesh_subs.emplace_back();
-            _mesh_subs.back().init(vmalloc, queues, std::format("data/mesh_{}.ply", i));
+            glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
+            _mesh_subs.back().init(vmalloc, queues, std::format("data/mesh_{}.ply", i), color);
         }
     }
     void destroy(vma::Allocator vmalloc) {
