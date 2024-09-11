@@ -43,12 +43,16 @@ struct Plymesh {
             }
 
             // read little endian vertices
-            std::vector<Vertex> raw_vertices(vert_n);
-            file.read(reinterpret_cast<char*>(raw_vertices.data()), sizeof(Vertex) * raw_vertices.size());
-            // flip y and swap y with z
+            typedef std::pair<glm::vec3, glm::vec3> RawVertex;
+            std::vector<RawVertex> raw_vertices(vert_n);
+            file.read(reinterpret_cast<char*>(raw_vertices.data()), sizeof(RawVertex) * raw_vertices.size());
+            // flip y and swap y with z and insert into full vertex vector
+            std::vector<Vertex> vertices;
+            vertices.reserve(vert_n);
             for (auto& vertex: raw_vertices) {
-                std::swap(vertex.first.y, vertex.first.z);
-                vertex.first.y *= -1.0;
+                glm::vec3 pos { vertex.first.x, -vertex.first.z, vertex.first.y };
+                glm::vec3 norm { vertex.second.x, vertex.second.y, vertex.second.z };
+                vertices.emplace_back(pos, norm);
             }
 
             // read little endian faces into indices
@@ -64,7 +68,7 @@ struct Plymesh {
             file.close();
             
             // create actual mesh from raw data
-            _mesh.init(vmalloc, queues, raw_vertices, raw_indices);
+            _mesh.init(vmalloc, queues, vertices, raw_indices);
         }
         else {
             fmt::println("failed to load ply file: {}", path.data());
