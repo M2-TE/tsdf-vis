@@ -86,7 +86,7 @@ struct Camera {
 	glm::vec3 _rot = { 0, 0, 0 };
 	float _fov = 60;
 	float _near = 0.01;
-	float _far = 100.0;
+	float _far = 1000.0;
     // gpu related
     vk::Buffer _buffer;
 	vma::Allocation _allocation;

@@ -9,15 +9,15 @@ struct Scene {
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
         _camera.init(vmalloc, queues);
         _grid.init(vmalloc, queues, "data/mesh.grid");
-        _mesh_main.init(vmalloc, queues, "data/mesh.ply");
+        _mesh_main.init(vmalloc, queues, "data/hsfulda33/mesh.ply", glm::vec3{ 0.5, 0.5, 0.5 });
 
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> dis(0.0, 1.0);
-        for (size_t i = 0; i < 5; i++) {
+        for (size_t i = 0; i < 43; i++) {
             _mesh_subs.emplace_back();
             glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
-            _mesh_subs.back().init(vmalloc, queues, std::format("data/mesh_{}.ply", i), color);
+            _mesh_subs.back().init(vmalloc, queues, std::format("data/hsfulda33/mesh_{}.ply", i), color);
         }
     }
     void destroy(vma::Allocator vmalloc) {
@@ -38,6 +38,11 @@ struct Scene {
         // go to next subtree
         if (Keys::pressed(SDLK_RIGHT)) {
             _mesh_sub_i = (_mesh_sub_i + 1) % _mesh_subs.size();
+        }
+        // go to previous subtree
+        if (Keys::pressed(SDLK_LEFT)) {
+            if (_mesh_sub_i == 0) _mesh_sub_i = _mesh_subs.size();
+            _mesh_sub_i = _mesh_sub_i - 1;
         }
     }
     // update after buffers are no longer being read
