@@ -5,9 +5,11 @@
 #include <SDL3/SDL_events.h>
 #if __has_include(<imgui.h>)
 #   include <imgui.h>
-#   define IMGUI_CAPTURE_EVAL ImGui::GetIO().WantCaptureKeyboard
+#   define IMGUI_CAPTURE_KBD ImGui::GetIO().WantCaptureKeyboard
+#   define IMGUI_CAPTURE_MOUSE ImGui::GetIO().WantCaptureMouse
 #else
-#   define IMGUI_CAPTURE_EVAL 0
+#   define IMGUI_CAPTURE_KBD 0
+#   define IMGUI_CAPTURE_MOUSE 0
 #endif
 
 namespace Input {
@@ -77,22 +79,22 @@ namespace Input {
 		Data::get().buttons_down.clear();
 	}
 	void static register_key_up(const SDL_KeyboardEvent& key_event) noexcept {
-		if (key_event.repeat || IMGUI_CAPTURE_EVAL) return;
+		if (key_event.repeat || IMGUI_CAPTURE_KBD) return;
 		Data::get().keys_released.insert(key_event.key);
 		Data::get().keys_down.erase(key_event.key);
 	}
 	void static register_key_down(const SDL_KeyboardEvent& key_event) noexcept {
-		if (key_event.repeat || IMGUI_CAPTURE_EVAL) return;
+		if (key_event.repeat || IMGUI_CAPTURE_KBD) return;
 		Data::get().keys_pressed.insert(key_event.key);
 		Data::get().keys_down.insert(key_event.key);
 	}
 	void static register_button_up(const SDL_MouseButtonEvent& button_event) noexcept {
-		// if (IMGUI_CAPTURE_EVAL) return;
+		if (IMGUI_CAPTURE_MOUSE) return;
 		Data::get().buttons_released.insert(button_event.button);
 		Data::get().buttons_down.erase(button_event.button);
 	}
 	void static register_button_down(const SDL_MouseButtonEvent& button_event) noexcept {
-		// if (IMGUI_CAPTURE_EVAL) return;
+		if (IMGUI_CAPTURE_MOUSE) return;
 		Data::get().buttons_pressed.insert(button_event.button);
 		Data::get().buttons_down.insert(button_event.button);
 	}
