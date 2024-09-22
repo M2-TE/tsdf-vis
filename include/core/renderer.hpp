@@ -258,14 +258,19 @@ private:
             .dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         };
         _depth_stencil.transition_layout(info_transition);
-        _pipe_default.execute(cmd, scene._mesh_main._mesh, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
-        _pipe_default.execute(cmd, scene._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eClear);
-
+        auto& mesh_main = scene._render_grey ? scene._mesh_main_grey._mesh : scene._mesh_main._mesh;
+        _pipe_default.execute(cmd, mesh_main, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
+        if (scene._render_subs) {
+            _pipe_default.execute(cmd, scene._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eLoad);
+        }
+        
         // draw points
         // _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
         
         // draw cells
-        // _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+        if (scene._render_grid){
+            _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+        }
     }
     void execute_smaa(vk::CommandBuffer cmd) {
         // SMAA edge detection
