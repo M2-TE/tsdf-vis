@@ -279,7 +279,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 1 } } }
 			};
 			vk::RenderingAttachmentInfo info_depth_attach {
 				.imageView = depth_dst._view,
@@ -287,7 +287,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = depth_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue = { .depthStencil = 1.0f },
+				.clearValue = { .depthStencil { 1.0f } },
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
@@ -327,7 +327,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 1 } } }
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
@@ -366,7 +366,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color = std::array<float, 4>{ 0, 0, 0, 1 } }
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 1 } } }
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
