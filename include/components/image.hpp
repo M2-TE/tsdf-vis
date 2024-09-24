@@ -26,7 +26,7 @@ struct Image {
         vk::AccessFlags2 dst_access = vk::AccessFlagBits2::eMemoryRead | vk::AccessFlagBits2::eMemoryWrite;
     };
     
-    void init(CreateInfo& info) {
+    void init(const CreateInfo& info) {
         _owning = true;
         _format = info.format;
         _extent = info.extent;
@@ -73,7 +73,7 @@ struct Image {
         };
         _view = info.device.createImageView(info_view);
     }
-    void wrap(WrapInfo& info) {
+    void wrap(const WrapInfo& info) {
         _owning = false;
         _image = info.image;
         _view = info.image_view;
@@ -154,7 +154,7 @@ struct Image {
         // clean up staging buffer
         vmalloc.destroyBuffer(staging_buffer, staging_alloc);
     }
-    void transition_layout(TransitionInfo& info) {
+    void transition_layout(const TransitionInfo& info) {
         vk::ImageMemoryBarrier2 image_barrier {
             .srcStageMask = _last_stage,
             .srcAccessMask = _last_access,

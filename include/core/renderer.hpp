@@ -45,7 +45,6 @@ public:
         _smaa_output.destroy(device, vmalloc);
         // destroy pipelines
         _pipe_default.destroy(device);
-        _pipe_scan_points.destroy(device);
         _pipe_cells.destroy(device);
         _pipe_smaa_edge_detection.destroy(device);
         _pipe_smaa_blend_weight_calc.destroy(device);
@@ -183,18 +182,6 @@ private:
             .vs_path = "defaults/default.vert", .fs_path = "defaults/default.frag",
         };
         _pipe_default.init(info_pipeline);
-        // specifically for pointclouds and tsdf cells
-        info_pipeline = {
-            .device = device, .extent = extent,
-            .color_formats = { _color._format },
-            .depth_format = _depth_stencil._format,
-            .poly_mode = vk::PolygonMode::ePoint,
-            .primitive_topology = vk::PrimitiveTopology::ePointList,
-            .cull_mode = vk::CullModeFlagBits::eNone,
-            .depth_write = false, .depth_test = true,
-            .vs_path = "extra/scan_points.vert", .fs_path = "extra/scan_points.frag",
-        };
-        _pipe_scan_points.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .color_formats = { _color._format },
@@ -210,7 +197,6 @@ private:
         _pipe_cells.init(info_pipeline);
         // write camera descriptor to pipelines
         _pipe_default.write_descriptor(device, 0, 0, camera._buffer);
-        _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer);
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer);
 
         // create SMAA pipelines
@@ -264,9 +250,6 @@ private:
             _pipe_default.execute(cmd, scene._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eLoad);
         }
         
-        // draw points
-        // _pipe_scan_points.execute(cmd, scene._grid._scan_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
-        
         // draw cells
         if (scene._render_grid){
             _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
@@ -315,16 +298,15 @@ private:
     Image _color;
     DepthStencil _depth_stencil;
     // SMAA todo: stencil optimizations
-    Image _smaa_area_tex; // constant
-    Image _smaa_search_tex; // constant
+    Image _smaa_area_tex; // constant lookup tex
+    Image _smaa_search_tex; // constant lookup tex
     Image _smaa_edges; // intermediate SMAA output
     Image _smaa_blend; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
-    bool _smaa_enabled = true;
+    bool _smaa_enabled = false;
 
     // pipelines
     Pipeline::Graphics _pipe_default;
-    Pipeline::Graphics _pipe_scan_points;
     Pipeline::Graphics _pipe_cells;
     // SMAA
     Pipeline::Graphics _pipe_smaa_edge_detection;
