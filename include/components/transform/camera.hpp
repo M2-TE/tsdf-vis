@@ -9,30 +9,28 @@
 #include "core/buffer.hpp"
 
 struct Camera {
-	struct BufferData {
-		glm::aligned_mat4x4 matrix;
-	};
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
         // create camera matrix buffer
-		vk::BufferCreateInfo info_buffer {
-			.size = sizeof(BufferData),	
-			.usage = vk::BufferUsageFlagBits::eUniformBuffer,
-			.sharingMode = vk::SharingMode::eExclusive,
-			.queueFamilyIndexCount = queues.size(),
-			.pQueueFamilyIndices = queues.data(),
-		};
-		vma::AllocationCreateInfo info_allocation {
-			.flags = 
-				vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
-				vma::AllocationCreateFlagBits::eMapped,
-			.usage = vma::MemoryUsage::eAutoPreferDevice,
-			.requiredFlags = 
-				vk::MemoryPropertyFlagBits::eDeviceLocal,
-			.preferredFlags = 
-				vk::MemoryPropertyFlagBits::eHostCoherent |
-				vk::MemoryPropertyFlagBits::eHostVisible, // ReBAR
-		};
-		_buffer.init(vmalloc, info_buffer, info_allocation);
+		_buffer.init(vmalloc,
+			vk::BufferCreateInfo {
+				.size = _buffer.size(),	
+				.usage = vk::BufferUsageFlagBits::eUniformBuffer,
+				.sharingMode = vk::SharingMode::eExclusive,
+				.queueFamilyIndexCount = queues.size(),
+				.pQueueFamilyIndices = queues.data(),
+			},
+			vma::AllocationCreateInfo {
+				.flags = 
+					vma::AllocationCreateFlagBits::eHostAccessSequentialWrite |
+					vma::AllocationCreateFlagBits::eMapped,
+				.usage = vma::MemoryUsage::eAutoPreferDevice,
+				.requiredFlags = 
+					vk::MemoryPropertyFlagBits::eDeviceLocal,
+				.preferredFlags = 
+					vk::MemoryPropertyFlagBits::eHostCoherent |
+					vk::MemoryPropertyFlagBits::eHostVisible, // ReBAR
+			}
+		);
     }
     void destroy(vma::Allocator vmalloc) {
 		_buffer.destroy(vmalloc);
@@ -62,19 +60,19 @@ struct Camera {
 		}
 
 		// merge rotation and projection matrices
-		BufferData data;
-		data.matrix = glm::perspectiveFovLH<float>(glm::radians<float>(_fov), _extent.width, _extent.height, _near, _far);
-		data.matrix = glm::rotate(data.matrix, -_rot.x, glm::aligned_vec3(1, 0, 0));
-		data.matrix = glm::rotate(data.matrix, -_rot.y, glm::aligned_vec3(0, 1, 0));
-		data.matrix = glm::translate(data.matrix, -_pos);
+		glm::aligned_mat4x4 matrix;
+		matrix = glm::perspectiveFovLH<float>(glm::radians<float>(_fov), _extent.width, _extent.height, _near, _far);
+		matrix = glm::rotate(matrix, -_rot.x, glm::aligned_vec3(1, 0, 0));
+		matrix = glm::rotate(matrix, -_rot.y, glm::aligned_vec3(0, 1, 0));
+		matrix = glm::translate(matrix, -_pos);
 		
 		// upload data
-		_buffer.write(vmalloc, data);
+		_buffer.write(vmalloc, matrix);
 	}
 
 	glm::aligned_vec3 _pos = { 0, 0, 0 };
 	glm::aligned_vec3 _rot = { 0, 0, 0 };
-	DeviceBuffer<BufferData> _buffer;
+	DeviceBuffer<glm::aligned_mat4x4> _buffer;
 	vk::Extent2D _extent;
 	float _fov = 60;
 	float _near = 0.01;

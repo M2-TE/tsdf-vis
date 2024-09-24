@@ -19,6 +19,7 @@ struct DeviceBuffer {
 		vmalloc.unmapMemory(_allocation);
 		vmalloc.destroyBuffer(_data, _allocation);
 	}
+	
 	auto static constexpr size() -> vk::DeviceSize {
 		return sizeof(T);
 	}
