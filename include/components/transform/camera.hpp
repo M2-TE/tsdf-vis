@@ -6,6 +6,7 @@
 #include <vk_mem_alloc.hpp>
 #include <fmt/base.h>
 #include "core/input.hpp"
+#include "core/buffer.hpp"
 
 struct Camera {
 	struct BufferData {
@@ -31,19 +32,10 @@ struct Camera {
 				vk::MemoryPropertyFlagBits::eHostCoherent |
 				vk::MemoryPropertyFlagBits::eHostVisible, // ReBAR
 		};
-		std::tie(_buffer, _allocation) = vmalloc.createBuffer(info_buffer, info_allocation);
-		_mapped_data_p = vmalloc.mapMemory(_allocation);
-
-		// check for host coherency and visibility
-		vk::MemoryPropertyFlags props = vmalloc.getAllocationMemoryProperties(_allocation);
-		if (props & vk::MemoryPropertyFlagBits::eHostVisible) _require_staging = false;
-		else _require_staging = true;
-		if (props & vk::MemoryPropertyFlagBits::eHostCoherent) _require_flushing = false;
-		else _require_flushing = true;
+		_buffer.init(vmalloc, info_buffer, info_allocation);
     }
     void destroy(vma::Allocator vmalloc) {
-		vmalloc.unmapMemory(_allocation);
-		vmalloc.destroyBuffer(_buffer, _allocation);
+		_buffer.destroy(vmalloc);
     }
     
     void resize(vk::Extent2D extent) {
@@ -74,26 +66,17 @@ struct Camera {
 		data.matrix = glm::perspectiveFovLH<float>(glm::radians<float>(_fov), _extent.width, _extent.height, _near, _far);
 		data.matrix = glm::rotate(data.matrix, -_rot.x, glm::aligned_vec3(1, 0, 0));
 		data.matrix = glm::rotate(data.matrix, -_rot.y, glm::aligned_vec3(0, 1, 0));
-
 		data.matrix = glm::translate(data.matrix, -_pos);
 		
 		// upload data
-		if (_require_staging) fmt::println("ReBAR is required and not present");
-		std::memcpy(_mapped_data_p, &data, sizeof(BufferData));
-		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(BufferData));
+		_buffer.write(vmalloc, data);
 	}
 
-	// cpu related
 	glm::aligned_vec3 _pos = { 0, 0, 0 };
 	glm::aligned_vec3 _rot = { 0, 0, 0 };
+	DeviceBuffer<BufferData> _buffer;
 	vk::Extent2D _extent;
 	float _fov = 60;
 	float _near = 0.01;
 	float _far = 1000.0;
-    // gpu related
-    vk::Buffer _buffer;
-	vma::Allocation _allocation;
-	void* _mapped_data_p;
-	bool _require_staging;
-	bool _require_flushing;
 };

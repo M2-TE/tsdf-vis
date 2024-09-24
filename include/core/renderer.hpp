@@ -209,9 +209,9 @@ private:
         };
         _pipe_cells.init(info_pipeline);
         // write camera descriptor to pipelines
-        _pipe_default.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
-        _pipe_cells.write_descriptor(device, 0, 0, camera._buffer, sizeof(Camera::BufferData));
+        _pipe_default.write_descriptor(device, 0, 0, camera._buffer);
+        _pipe_scan_points.write_descriptor(device, 0, 0, camera._buffer);
+        _pipe_cells.write_descriptor(device, 0, 0, camera._buffer);
 
         // create SMAA pipelines
         info_pipeline = {

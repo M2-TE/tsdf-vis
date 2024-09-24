@@ -4,6 +4,7 @@
 #include <fmt/base.h>
 #include "components/mesh/mesh.hpp"
 #include "components/image.hpp"
+#include "core/buffer.hpp"
 
 namespace Pipeline
 {
@@ -55,6 +56,27 @@ namespace Pipeline
 				.buffer = buffer,
 				.offset = 0,
 				.range = size
+			};
+			vk::WriteDescriptorSet write_buffer {
+				.dstSet = _desc_sets[set],
+				.dstBinding = binding,
+				.dstArrayElement = 0,
+				.descriptorCount = 1,
+				.descriptorType = vk::DescriptorType::eUniformBuffer,
+				.pBufferInfo = &info_buffer
+			};
+			device.updateDescriptorSets(write_buffer, {});
+		}
+		template<typename T>
+		void write_descriptor(vk::Device device, uint32_t set, uint32_t binding, DeviceBuffer<T>& buffer) {
+			if (_desc_sets.size() <= set) {
+				fmt::println("Attempted to bind invalid set"); 
+				return;
+			}
+			vk::DescriptorBufferInfo info_buffer {
+				.buffer = buffer._data,
+				.offset = 0,
+				.range = buffer.size()
 			};
 			vk::WriteDescriptorSet write_buffer {
 				.dstSet = _desc_sets[set],
