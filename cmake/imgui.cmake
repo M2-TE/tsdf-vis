@@ -1,4 +1,8 @@
-FetchContent_Declare(imgui GIT_REPOSITORY "https://github.com/ocornut/imgui.git" GIT_TAG "226e0d579d2632a81d95f60bb5d65c70e55feb90" GIT_SHALLOW OFF) # disabled shallow because of git tag hash usage
+FetchContent_Declare(imgui
+    GIT_REPOSITORY "https://github.com/ocornut/imgui.git"
+    GIT_TAG "226e0d579d2632a81d95f60bb5d65c70e55feb90"
+    GIT_SHALLOW OFF # disabled shallow because of git tag hash usage
+    OVERRIDE_FIND_PACKAGE)
 FetchContent_MakeAvailable(imgui)
 target_sources(${PROJECT_NAME} PRIVATE
     "${imgui_SOURCE_DIR}/imgui.cpp"

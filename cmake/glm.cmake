@@ -1,4 +1,3 @@
-
 if(${CMAKE_CXX_STANDARD} GREATER_EQUAL 20)
     set(GLM_ENABLE_CXX_20 ON)
 elseif(${CMAKE_CXX_STANDARD} EQUAL 17)
@@ -10,7 +9,12 @@ elseif(${CMAKE_CXX_STANDARD} EQUAL 11)
 endif()
 
 # query SIMD support
-FetchContent_Declare(libsimdpp GIT_REPOSITORY "https://github.com/p12tic/libsimdpp.git" GIT_TAG "master" GIT_SHALLOW ON SOURCE_SUBDIR "disabled/")
+FetchContent_Declare(libsimdpp
+    GIT_REPOSITORY "https://github.com/p12tic/libsimdpp.git"
+    GIT_TAG "v2.1"
+    GIT_SHALLOW ON
+    SOURCE_SUBDIR "disabled/"
+    OVERRIDE_FIND_PACKAGE)
 FetchContent_MakeAvailable(libsimdpp)
 list(APPEND CMAKE_MODULE_PATH "${libsimdpp_SOURCE_DIR}/cmake/")
 include(SimdppMultiarch)
@@ -38,7 +42,11 @@ set(GLM_ENABLE_LANG_EXTENSIONS ${CMAKE_CXX_EXTENSIONS})
 set(GLM_DISABLE_AUTO_DETECTION OFF)
 set(GLM_FORCE_PURE OFF)
 
-FetchContent_Declare(glm GIT_REPOSITORY "https://github.com/g-truc/glm.git" GIT_TAG "1.0.1" GIT_SHALLOW ON)
+FetchContent_Declare(glm
+    GIT_REPOSITORY "https://github.com/g-truc/glm.git"
+    GIT_TAG "1.0.1"
+    GIT_SHALLOW ON
+    OVERRIDE_FIND_PACKAGE)
 FetchContent_MakeAvailable(glm)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     "GLM_FORCE_DEPTH_ZERO_TO_ONE"

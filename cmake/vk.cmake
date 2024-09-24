@@ -1,9 +1,21 @@
-FetchContent_Declare(vk GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git" GIT_TAG "v1.3.290" GIT_SHALLOW ON GIT_SUBMODULES "" SOURCE_SUBDIR "disabled/")
-FetchContent_Declare(vk_hpp GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Hpp.git" GIT_TAG "v1.3.290" GIT_SHALLOW ON GIT_SUBMODULES "" SOURCE_SUBDIR "disabled/")
-FetchContent_MakeAvailable(vk vk_hpp)
+FetchContent_Declare(vulkan-headers
+    GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git"
+    GIT_TAG "v1.3.290"
+    GIT_SHALLOW ON
+    GIT_SUBMODULES ""
+    SOURCE_SUBDIR "disabled"
+    OVERRIDE_FIND_PACKAGE)
+FetchContent_Declare(vulkan-hpp
+    GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Hpp.git"
+    GIT_TAG "v1.3.290"
+    GIT_SHALLOW ON
+    GIT_SUBMODULES ""
+    SOURCE_SUBDIR "disabled"
+    OVERRIDE_FIND_PACKAGE)
+FetchContent_MakeAvailable(vulkan-headers vulkan-hpp)
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
-    "${vk_SOURCE_DIR}/include"
-	"${vk_hpp_SOURCE_DIR}")
+    "${vulkan-headers_SOURCE_DIR}/include"
+	"${vulkan-hpp_SOURCE_DIR}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE 
     "VULKAN_VALIDATION_LAYERS" # enable vulkan validation layers
     "VULKAN_HPP_NO_SETTERS"

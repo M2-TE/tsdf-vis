@@ -43,6 +43,7 @@ public:
             ._required_vk11_features {
             },
             ._required_vk12_features {
+                // .bufferDeviceAddress = true,
             },
             ._required_vk13_features {
                 .synchronization2 = true,
