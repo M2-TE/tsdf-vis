@@ -244,15 +244,17 @@ private:
             .dst_access = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         };
         _depth_stencil.transition_layout(info_transition);
-        auto& mesh_main = scene._render_grey ? scene._mesh_main_grey._mesh : scene._mesh_main._mesh;
+
+        auto& scene_data = scene._data;
+        auto& mesh_main = scene._render_grey ? scene_data._mesh_main_grey._mesh : scene_data._mesh_main._mesh;
         _pipe_default.execute(cmd, mesh_main, _color, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eClear);
         if (scene._render_subs) {
-            _pipe_default.execute(cmd, scene._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eLoad);
+            _pipe_default.execute(cmd, scene_data._mesh_subs[scene._mesh_sub_i]._mesh, _color, vk::AttachmentLoadOp::eLoad);
         }
         
         // draw cells
         if (scene._render_grid){
-            _pipe_cells.execute(cmd, scene._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
+            _pipe_cells.execute(cmd, scene_data._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
         }
     }
     void execute_smaa(vk::CommandBuffer cmd) {
