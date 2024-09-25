@@ -124,7 +124,11 @@ public:
             case SDL_EventType::SDL_EVENT_QUIT: _running = false; break;
             case SDL_EventType::SDL_EVENT_WINDOW_RESTORED: _rendering = true; break;
             case SDL_EventType::SDL_EVENT_WINDOW_MINIMIZED: _rendering = false; break;
-            case SDL_EventType::SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: _swapchain._resize_requested = true; break;
+            case SDL_EventType::SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+                fmt::println("Window resized to {}x{}", event_p->window.data1, event_p->window.data2);
+                _swapchain._resize_requested = true; 
+                break;
+            }
             // input handling
             case SDL_EventType::SDL_EVENT_KEY_UP: Input::register_key_up(event_p->key); break;
             case SDL_EventType::SDL_EVENT_KEY_DOWN: Input::register_key_down(event_p->key); break;

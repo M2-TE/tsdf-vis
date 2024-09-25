@@ -82,9 +82,12 @@ public:
             .compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
             .presentMode = vk::PresentModeKHR::eFifo,
             .clipped = true,
-            .oldSwapchain = nullptr,
+            .oldSwapchain = _swapchain,
         };
+        vk::SwapchainKHR old_swapchain = _swapchain;
         _swapchain = device.createSwapchainKHR(info_swapchain);
+        if (old_swapchain != nullptr && _images.size() > 0) device.destroySwapchainKHR(old_swapchain);
+        _images.clear(); // old images were owned by previous swapchain
 
         // retrieve and wrap swapchain images
         std::vector<vk::Image> images = device.getSwapchainImagesKHR(_swapchain);
@@ -105,12 +108,12 @@ public:
         }
         _resize_requested = false;
     }
-    void destroy(vk::Device device) {
+    void destroy_partial(vk::Device device) {
         for (auto& frame: _sync_frames) frame.destroy(device);
-        for (auto& image: _images) device.destroyImageView(image._view);
+    }
+    void destroy(vk::Device device) {
         if (_images.size() > 0) device.destroySwapchainKHR(_swapchain);
-        _sync_frames.clear();
-        _images.clear();
+        destroy_partial(device);
     }
     
     void set_target_framerate(std::size_t fps) {
@@ -123,9 +126,9 @@ public:
         _target_frame_time = std::chrono::nanoseconds(static_cast<int64_t>(ns));
     }
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) {
-        destroy(device);
+        destroy_partial(device);
         init(physDevice, device, window, queues);
-        fmt::println("resized to: {}x{}", window.size().width, window.size().height);
+        fmt::println("Swapchain resized to: {}x{}", window.size().width, window.size().height);
     }
     void present(vk::Device device, Image& src_image, vk::Semaphore src_ready_to_read, vk::Semaphore src_ready_to_write) {
         // wait for this frame's fence to be signaled and reset it
@@ -139,13 +142,13 @@ public:
             std::tie(result, swap_index) = device.acquireNextImageKHR(_swapchain, UINT64_MAX, frame._ready_to_write);
             // mark swapchain for resize, but still continue to present
             if (result == vk::Result::eSuboptimalKHR) {
-                fmt::println("swapchain image suboptimal");
+                fmt::println("Swapchain image suboptimal");
                 _resize_requested = true;
             }
             // abort if swapchain is out of date
             else
             if (result == vk::Result::eErrorOutOfDateKHR) {
-                fmt::println("swapchain image out of date");
+                fmt::println("Swapchain image out of date");
                 _resize_requested = true;
                 return;
             }
@@ -191,18 +194,19 @@ public:
             .pWaitSemaphores = &frame._ready_to_read,
             .swapchainCount = 1,
             .pSwapchains = &_swapchain,
-            .pImageIndices = &swap_index  
+            .pImageIndices = &swap_index,
+            .pResults = nullptr
         };
         wait_target_framerate();
         try {
             vk::Result result = _presentation_queue.presentKHR(presentInfo);
             if (result == vk::Result::eSuboptimalKHR) {
-                fmt::println("swapchain suboptimal");
+                fmt::println("Swapchain suboptimal");
                 _resize_requested = true;
             }
         }
         catch (const vk::OutOfDateKHRError& e) {
-            fmt::println("swapchain out of date");
+            fmt::println("Swapchain out of date");
             _resize_requested = true;
             return;
         }
