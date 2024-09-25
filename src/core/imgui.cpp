@@ -51,18 +51,29 @@ namespace ImGui
                 .Instance = instance,
                 .PhysicalDevice = phys_device,
                 .Device = device,
+                .QueueFamily = 0, // TODO: get queue family
                 .Queue = queue,
                 .DescriptorPool = s_imgui_desc_pool,
                 .RenderPass = nullptr,
                 .MinImageCount = 3,
                 .ImageCount = 3,
                 .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+                .PipelineCache = nullptr,
+                .Subpass = 0,
                 .UseDynamicRendering = true,
                 .PipelineRenderingCreateInfo { 
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+                    .pNext = nullptr,
+                    .viewMask = 0,
                     .colorAttachmentCount = 1, 
-                    .pColorAttachmentFormats = (VkFormat*)&color_format 
-                }
+                    .pColorAttachmentFormats = (VkFormat*)&color_format,
+                    .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+                    .stencilAttachmentFormat = VK_FORMAT_UNDEFINED,
+                },
+                .Allocator = nullptr,
+                .CheckVkResultFn = nullptr,
+                .MinAllocationSize = 0, // TODO: get min allocation size
+
             };
             ImGui_ImplVulkan_Init(&info_imgui_vk);
             ImGui_ImplVulkan_CreateFontsTexture();

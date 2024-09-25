@@ -43,8 +43,6 @@ khronos_validation.syncval_shader_accesses_heuristic = true
 khronos_validation.gpuav_select_instrumented_shaders = true
 khronos_validation.gpuav_debug_validate_instrumented_shaders = true
 # etc:
+khronos_validation.validate_best_practices = true
 khronos_validation.report_flags = info,warn,error")
-
-# optimally, both of these should be enabled:
-# khronos_validation.validate_best_practices = true
-# khronos_validation.report_flags = info,warn,error,perf")
+# add "perf" flag for very nosy validation

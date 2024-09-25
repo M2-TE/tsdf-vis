@@ -137,7 +137,10 @@ public:
     }
     void execute_frame() {
         handle_inputs();
-        if (_swapchain._resize_requested) resize();
+        if (_swapchain._resize_requested) {
+            resize();
+            return;
+        }
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
 

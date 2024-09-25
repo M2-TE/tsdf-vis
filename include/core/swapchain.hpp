@@ -91,6 +91,7 @@ public:
         for (vk::Image image: images) {
             Image::WrapInfo info_wrap {
                 .image = image,
+                .image_view = nullptr,
                 .extent = { _extent.width, _extent.height, 0 },
                 .aspects = vk::ImageAspectFlagBits::eColor
             };
