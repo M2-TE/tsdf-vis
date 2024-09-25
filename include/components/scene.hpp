@@ -33,6 +33,23 @@ struct Scene {
         }
     }
 
+    void static SDLCALL folder_callback(void* userdata_p, const char* const* filelist_pp, int /*filter*/) {
+        if (!filelist_pp) {
+            fmt::println("An error occured: {}", SDL_GetError());
+            return;
+        } 
+        else
+        if (!*filelist_pp) {
+            fmt::println("The user did not select any file.");
+            fmt::println("Most likely, the dialog was canceled.");
+            return;
+        }
+        fmt::println("Full path to selected file: {}", *filelist_pp);
+
+        Scene* scene_p = static_cast<Scene*>(userdata_p);
+        scene_p->_camera.resize(scene_p->_camera._extent);
+    }
+
     // update without affecting current frames in flight
     void update_safe() {
         // ImGui::Begin("subtree index");
@@ -42,6 +59,10 @@ struct Scene {
         // ImGui::Text(fmt::format("position: {:.2f} {:.2f} {:.2f}", _camera._pos.x, _camera._pos.y, _camera._pos.z).c_str());
         // ImGui::Text(fmt::format("rotation: {:.2f} {:.2f} {:.2f}", _camera._rot.x, _camera._rot.y, _camera._rot.z).c_str());
         // ImGui::End();
+
+        if (Keys::down(SDLK_LCTRL) && Keys::pressed('o')) {
+            SDL_ShowOpenFolderDialog(folder_callback, this, nullptr, SDL_GetBasePath(), false);
+        }
 
         // go to next subtree
         if (Keys::pressed(SDLK_RIGHT)) {
