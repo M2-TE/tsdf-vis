@@ -24,8 +24,7 @@ struct Window {
 
         // check availability of extensions requested by sdl
         auto available_extensions = vk::enumerateInstanceExtensionProperties();
-        std::set<std::string> extension_set;
-        std::copy(extensions.cbegin(), extensions.cend(), std::inserter(extension_set, extension_set.end()));
+        std::set<std::string> extension_set(extensions.cbegin(), extensions.cend());
         for (auto& ext: available_extensions) {
             std::string ext_str = ext.extensionName;
             auto ext_it = extension_set.find(ext_str);

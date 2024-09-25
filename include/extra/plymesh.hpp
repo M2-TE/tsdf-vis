@@ -18,8 +18,8 @@ struct Plymesh {
 
             // element vertex N
             std::getline(file, line);
-            size_t pos = line.find_last_of(' ');
-            std::string vert_n_str = line.substr(pos + 1, line.size() - pos);
+            size_t str_pos = line.find_last_of(' ');
+            std::string vert_n_str = line.substr(str_pos + 1, line.size() - str_pos);
             size_t vert_n = std::stoi(vert_n_str);
             
             // skip parsing vertex contents for now
@@ -29,8 +29,8 @@ struct Plymesh {
 
             // element face N
             std::getline(file, line);
-            pos = line.find_last_of(' ');
-            std::string face_n_str = line.substr(pos + 1, line.size() - pos);
+            str_pos = line.find_last_of(' ');
+            std::string face_n_str = line.substr(str_pos + 1, line.size() - str_pos);
             size_t face_n = std::stoi(face_n_str);
 
             // skip face properties
@@ -60,8 +60,8 @@ struct Plymesh {
             std::vector<uint32_t> raw_indices;
             raw_indices.reserve(face_n * 3);
             for (size_t i = 0; i < face_n; i++) {
-                u_char indices_n; // number of indices per face
-                file.read(reinterpret_cast<char*>(&indices_n), sizeof(u_char));
+                uint8_t indices_n; // number of indices per face
+                file.read(reinterpret_cast<char*>(&indices_n), sizeof(uint8_t));
                 std::array<int, 3> indices_face;
                 file.read(reinterpret_cast<char*>(&indices_face), sizeof(int) * 3);
                 raw_indices.insert(raw_indices.end(), indices_face.cbegin(), indices_face.cend());

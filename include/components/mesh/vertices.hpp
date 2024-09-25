@@ -43,7 +43,7 @@ struct Vertices {
 		std::memcpy(mapped_data_p, vertex_data.data(), sizeof(Vertex) * vertex_data.size());
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(Vertex) * vertex_data.size());
         vmalloc.unmapMemory(_allocation);
-        _vertex_n = vertex_data.size();
+        _vertex_n = (uint32_t)vertex_data.size();
     }
     void destroy(vma::Allocator vmalloc) {
 		vmalloc.destroyBuffer(_buffer, _allocation);

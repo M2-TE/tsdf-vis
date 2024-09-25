@@ -16,7 +16,8 @@ FetchContent_Declare(SDL
     GIT_REPOSITORY "https://github.com/libsdl-org/SDL.git"
     GIT_TAG "d1739ce3a826bbae22f88d8fba70462499f3734c"
     GIT_SHALLOW OFF # disabled shallow because of git tag hash usage
-    OVERRIDE_FIND_PACKAGE)
+    OVERRIDE_FIND_PACKAGE
+    SYSTEM)
 FetchContent_MakeAvailable(SDL)
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE "${SDL_SOURCE_DIR}/include")
 if (SDL_SHARED)

@@ -61,7 +61,7 @@ struct Camera {
 
 		// merge rotation and projection matrices
 		glm::aligned_mat4x4 matrix;
-		matrix = glm::perspectiveFovLH<float>(glm::radians<float>(_fov), _extent.width, _extent.height, _near, _far);
+		matrix = glm::perspectiveFovLH<float>(glm::radians<float>(_fov), (float)_extent.width, (float)_extent.height, _near, _far);
 		matrix = glm::rotate(matrix, -_rot.x, glm::aligned_vec3(1, 0, 0));
 		matrix = glm::rotate(matrix, -_rot.y, glm::aligned_vec3(0, 1, 0));
 		matrix = glm::translate(matrix, -_pos);

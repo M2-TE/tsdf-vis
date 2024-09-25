@@ -135,7 +135,7 @@ private:
 
         // create dummy queues to check presentation capabilities
         auto [queue_infos, _] = create_queue_infos(physical_device);
-        bool passed = false;
+        vk::Bool32 passed = false;
         // check each queue family for presentation capabilities
         for (auto& info: queue_infos) {
             vk::Bool32 b = physical_device.getSurfaceSupportKHR(info.queueFamilyIndex, surface);
@@ -154,7 +154,7 @@ private:
         };
 
         // iterate through all queue families to store relevant ones
-        for (size_t i = 0; i < queue_families.size(); i++) {
+        for (uint32_t i = 0; i < queue_families.size(); i++) {
             vk::QueueFlags flags = queue_families[i].queueFlags;
             uint32_t capability_count = std::popcount((uint32_t)flags);
             // check if this queue family works for each requested queue
@@ -182,14 +182,14 @@ private:
             auto [queue_family_index, _] = vec.front();
 
             // map the requested queue to info_queues
-            queue_mappings[i] = info_queues.size();
+            queue_mappings[i] = (uint32_t)info_queues.size();
             
             // emplace each queue family only once
             for (size_t q = 0; q < info_queues.size(); q++) {
                 uint32_t family = info_queues[q].queueFamilyIndex;
                 // when queue family is already present, update mapping
                 if (family == queue_family_index) {
-                    queue_mappings[i] = q;
+                    queue_mappings[i] = (uint32_t)q;
                     break;
                 }
             }

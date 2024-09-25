@@ -6,7 +6,7 @@ SDL_AppResult SDL_Fail() {
     // TODO
     return SDL_AppResult::SDL_APP_FAILURE;
 }
-SDL_AppResult SDL_AppInit(void** appstate_pp, int argc, char** argv) {
+SDL_AppResult SDL_AppInit(void** appstate_pp, int, char**) {
     *appstate_pp = new Engine();
     Engine* engine_p = static_cast<Engine*>(*appstate_pp);
     engine_p->init();

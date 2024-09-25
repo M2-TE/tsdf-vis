@@ -14,7 +14,8 @@ FetchContent_Declare(libsimdpp
     GIT_TAG "v2.1"
     GIT_SHALLOW ON
     SOURCE_SUBDIR "disabled/"
-    OVERRIDE_FIND_PACKAGE)
+    OVERRIDE_FIND_PACKAGE
+    SYSTEM)
 FetchContent_MakeAvailable(libsimdpp)
 list(APPEND CMAKE_MODULE_PATH "${libsimdpp_SOURCE_DIR}/cmake/")
 include(SimdppMultiarch)
@@ -46,7 +47,8 @@ FetchContent_Declare(glm
     GIT_REPOSITORY "https://github.com/g-truc/glm.git"
     GIT_TAG "1.0.1"
     GIT_SHALLOW ON
-    OVERRIDE_FIND_PACKAGE)
+    OVERRIDE_FIND_PACKAGE
+    SYSTEM)
 FetchContent_MakeAvailable(glm)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     "GLM_FORCE_DEPTH_ZERO_TO_ONE"

@@ -9,7 +9,8 @@ FetchContent_Declare(spirv-reflect
     GIT_TAG "vulkan-sdk-1.3.290.0"
     GIT_SHALLOW ON
     GIT_SUBMODULES ""
-    OVERRIDE_FIND_PACKAGE)
+    OVERRIDE_FIND_PACKAGE
+    SYSTEM)
 FetchContent_MakeAvailable(spirv-reflect)
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-reflect-static)
 
@@ -18,7 +19,8 @@ FetchContent_Declare(smaa
     GIT_REPOSITORY "https://github.com/iryoku/smaa.git"
     GIT_TAG "master"
     GIT_SHALLOW ON
-    OVERRIDE_FIND_PACKAGE)
+    OVERRIDE_FIND_PACKAGE
+    SYSTEM)
 FetchContent_MakeAvailable(smaa)
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE "${smaa_SOURCE_DIR}/Textures")
 
@@ -61,12 +63,14 @@ else()
         GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Headers.git"
         GIT_TAG "vulkan-sdk-1.3.290.0"
         GIT_SHALLOW ON
-        OVERRIDE_FIND_PACKAGE)
+        OVERRIDE_FIND_PACKAGE
+        SYSTEM)
     FetchContent_Declare(spirv-tools
         GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Tools.git"
         GIT_TAG "vulkan-sdk-1.3.290.0"
         GIT_SHALLOW ON
-        OVERRIDE_FIND_PACKAGE)
+        OVERRIDE_FIND_PACKAGE
+        SYSTEM)
     FetchContent_MakeAvailable(spirv-headers spirv-tools)
     # glslang for runtime/static shader compilation
     set(ENABLE_OPT ON)
@@ -81,7 +85,8 @@ else()
         GIT_REPOSITORY "https://github.com/KhronosGroup/glslang.git"
         GIT_TAG "vulkan-sdk-1.3.290.0"
         GIT_SHALLOW ON
-        OVERRIDE_FIND_PACKAGE)
+        OVERRIDE_FIND_PACKAGE
+        SYSTEM)
     FetchContent_MakeAvailable(glslang)
 
     # compile glsl to spirv
@@ -107,7 +112,8 @@ FetchContent_Declare(cmrc
     GIT_REPOSITORY "https://github.com/vector-of-bool/cmrc.git"
     GIT_TAG "2.0.1"
     GIT_SHALLOW ON
-    OVERRIDE_FIND_PACKAGE)
+    OVERRIDE_FIND_PACKAGE
+    SYSTEM)
 FetchContent_MakeAvailable(cmrc)
 cmrc_add_resource_library(shaders ALIAS cmrc::shaders WHENCE "${CMAKE_CURRENT_BINARY_DIR}/shaders" "${SPIRV_BINARY_FILES}")
 target_link_libraries(${PROJECT_NAME} PRIVATE cmrc::shaders)

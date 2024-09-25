@@ -133,7 +133,7 @@ public:
         device.resetFences(frame._ready_to_record);
 
         // acquire image from swapchain
-        uint32_t swap_index;
+        uint32_t swap_index = 0;
         for (auto result = vk::Result::eTimeout; result == vk::Result::eTimeout;) {
             std::tie(result, swap_index) = device.acquireNextImageKHR(_swapchain, UINT64_MAX, frame._ready_to_write);
         }
@@ -187,7 +187,7 @@ public:
                 throw vk::OutOfDateKHRError("swapchain out of date");
             }
         }
-        catch (const vk::OutOfDateKHRError& e) {
+        catch (const vk::OutOfDateKHRError&) {
             fmt::println("swapchain out of date");
             _resize_requested = true;
         }

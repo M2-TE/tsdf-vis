@@ -141,7 +141,7 @@ public:
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
 
-        _scene.update_safe(_vmalloc);
+        _scene.update_safe();
         _renderer.wait(_device);
         _scene.update(_vmalloc);
         _renderer.render(_device, _swapchain, _queues, _scene);

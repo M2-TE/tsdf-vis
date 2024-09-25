@@ -45,7 +45,7 @@ struct Indices {
 		std::memcpy(mapped_data_p, index_data.data(), sizeof(Index) * index_data.size());
 		if (_require_flushing) vmalloc.flushAllocation(_allocation, 0, sizeof(Index) * index_data.size());
         vmalloc.unmapMemory(_allocation);
-        _index_n = index_data.size();
+        _index_n = (uint32_t)index_data.size();
     }
     void destroy(vma::Allocator vmalloc) {
 		vmalloc.destroyBuffer(_buffer, _allocation);

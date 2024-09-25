@@ -15,7 +15,6 @@ struct DeviceBuffer {
 		else _require_flushing = true;
 	}
 	void destroy(vma::Allocator vmalloc) {
-		vmalloc.unmapMemory(_allocation);
 		vmalloc.destroyBuffer(_data, _allocation);
 	}
 	

@@ -267,7 +267,7 @@ namespace Pipeline
 
 			vk::GraphicsPipelineCreateInfo pipeInfo {
 				.pNext = &renderInfo,
-				.stageCount = shader_stages.size(), 
+				.stageCount = (uint32_t)shader_stages.size(), 
 				.pStages = shader_stages.data(),
 				.pVertexInputState = &info_vertex_input,
 				.pInputAssemblyState = &info_input_assembly,

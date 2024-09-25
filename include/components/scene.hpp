@@ -33,7 +33,7 @@ struct Scene {
     }
 
     // update without affecting current frames in flight
-    void update_safe(vma::Allocator vmalloc) {
+    void update_safe() {
         // ImGui::Begin("subtree index");
         // ImGui::Text(fmt::format("subtree index: {}", _mesh_sub_i).c_str());
         // ImGui::End();
@@ -44,11 +44,11 @@ struct Scene {
 
         // go to next subtree
         if (Keys::pressed(SDLK_RIGHT)) {
-            _mesh_sub_i = (_mesh_sub_i + 1) % _mesh_subs.size();
+            _mesh_sub_i = (_mesh_sub_i + 1) % (uint32_t)_mesh_subs.size();
         }
         // go to previous subtree
         if (Keys::pressed(SDLK_LEFT)) {
-            if (_mesh_sub_i == 0) _mesh_sub_i = _mesh_subs.size();
+            if (_mesh_sub_i == 0) _mesh_sub_i = (uint32_t)_mesh_subs.size();
             _mesh_sub_i = _mesh_sub_i - 1;
         }
 
