@@ -2,7 +2,7 @@
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
 #include <SDL3/SDL_events.h>
-#include "util/device_selector.hpp"
+#include "core/device_selector.hpp"
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/swapchain.hpp"

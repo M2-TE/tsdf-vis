@@ -1,6 +1,6 @@
 #define VULKAN_HPP_USE_REFLECT
 #include <vulkan/vulkan.hpp>
-#include "util/device_selector.hpp"
+#include "core/device_selector.hpp"
 
 bool DeviceSelector::check_api_ver(vk::PhysicalDeviceProperties& props) {
     bool passed = true;

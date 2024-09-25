@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <fmt/base.h>
 #include "components/mesh/mesh.hpp"
-#include "components/image.hpp"
+#include "core//image.hpp"
 #include "core/buffer.hpp"
 
 namespace Pipeline

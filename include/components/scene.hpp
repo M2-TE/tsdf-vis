@@ -2,8 +2,8 @@
 // #include <random>
 #include <fmt/format.h>
 #include "components/transform/camera.hpp"
-#include "extra/grid.hpp"
-#include "extra/plymesh.hpp"
+#include "components/extra/grid.hpp"
+#include "components/extra/plymesh.hpp"
 
 struct Scene {
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
@@ -15,11 +15,12 @@ struct Scene {
         // std::random_device rd;
         // std::mt19937 gen(rd());
         // std::uniform_real_distribution<float> dis(0.0, 1.0);
-        for (size_t i = 0; i < 30; i++) {
-            _mesh_subs.emplace_back();
+        static constexpr std::size_t subs_n = 30;
+        _mesh_subs.resize(subs_n);
+        for (size_t i = 0; i < subs_n; i++) {
             // glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
             glm::vec3 color = { 1.0, 0.1, 0.1 };
-            _mesh_subs.back().init(vmalloc, queues, std::format("data/hsfd23/mesh_{}.ply", i), color);
+            _mesh_subs[i].init(vmalloc, queues, std::format("data/hsfd23/mesh_{}.ply", i), color);
         }
     }
     void destroy(vma::Allocator vmalloc) {

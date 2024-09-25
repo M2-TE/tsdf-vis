@@ -5,7 +5,7 @@
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/imgui.hpp"
-#include "components/image.hpp"
+#include "core//image.hpp"
 
 class Swapchain {
     struct SyncFrame {
