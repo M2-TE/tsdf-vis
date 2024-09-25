@@ -12,9 +12,11 @@
 #include "components/mesh/indices.hpp"
 
 struct Grid {
-    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path_rel) {
 		std::ifstream file;
-		file.open(path.data(), std::ifstream::binary);
+        std::string path_full = SDL_GetBasePath();
+        path_full.append(path_rel.data());
+		file.open(path_full, std::ifstream::binary);
         if (file.good()) {
             // read header
             float voxelsize = 0;
@@ -65,7 +67,7 @@ struct Grid {
             file.close();
         }
         else {
-            fmt::println("unable to read grid: {}", path.data());
+            fmt::println("unable to read grid: {}", path_full);
         }
     }
     void destroy(vma::Allocator vmalloc) {

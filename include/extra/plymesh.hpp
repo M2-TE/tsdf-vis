@@ -1,16 +1,18 @@
 #pragma once
 
 struct Plymesh {
-    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path, std::optional<glm::vec3> color = std::nullopt) {
+    void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues, std::string_view path_rel, std::optional<glm::vec3> color = std::nullopt) {
         std::ifstream file;
-		file.open(path.data(), std::ifstream::binary);
+        std::string path_full = SDL_GetBasePath();
+        path_full.append(path_rel.data());
+		file.open(path_full, std::ifstream::binary);
         if (file.good()) {
             std::string line;
 
             // validate header start
             std::getline(file, line);
             if (line != "ply") {
-                fmt::println("corrupted header for {}", path.data());
+                fmt::println("corrupted header for {}", path_full);
             }
             
             // ignoring format for now
@@ -39,7 +41,7 @@ struct Plymesh {
             // validate header end
             std::getline(file, line);
             if (line != "end_header") {
-                fmt::println("missing/unexpected header end for {}", path.data());
+                fmt::println("missing/unexpected header end for {}", path_full);
             }
 
             // read little endian vertices
@@ -72,7 +74,7 @@ struct Plymesh {
             _mesh.init(vmalloc, queues, vertices, raw_indices);
         }
         else {
-            fmt::println("failed to load ply file: {}", path.data());
+            fmt::println("failed to load ply file: {}", path_full);
         }
     }
     void destroy(vma::Allocator vmalloc) {

@@ -33,7 +33,6 @@ public:
                 // vk::KHRDynamicRenderingLocalReadExtensionName,
             },
             ._optional_extensions {
-                vk::EXTMemoryPriorityExtensionName,
                 vk::EXTPageableDeviceLocalMemoryExtensionName,
             },
             ._required_features {
@@ -70,14 +69,8 @@ public:
             .vkGetInstanceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetInstanceProcAddr,
             .vkGetDeviceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr,
         };
-        vma::AllocatorCreateFlags vma_flags = vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation;
-        for (const char* ext: device_selector._required_extensions) {
-            if (std::strcmp(ext, vk::EXTMemoryPriorityExtensionName) == 0) {
-                vma_flags |= vma::AllocatorCreateFlagBits::eExtMemoryPriority;
-            }
-        }
         vma::AllocatorCreateInfo info_vmalloc {
-            .flags = vma_flags,
+            .flags = vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
             .physicalDevice = _phys_device,
             .device = _device,
             .pVulkanFunctions = &vk_funcs,
@@ -89,14 +82,12 @@ public:
         // create renderer components
         DepthStencil::set_format(_phys_device);
         _queues.init(_device, queue_mappings);
-        _swapchain.set_target_framerate(0);
+        _swapchain.set_target_framerate(_fps_foreground);
         _swapchain._resize_requested = true;
         
         // initialize imgui backend
         ImGui::impl::init_sdl(_window._window_p);
         ImGui::impl::init_vulkan(_instance, _device, _phys_device, _queues._universal, vk::Format::eR16G16B16A16Sfloat);
-        
-        _running = true;
         _rendering = true;
         
         // begin constructing scenes
@@ -117,11 +108,11 @@ public:
         _instance.destroy();
     }
     
-    void execute_event(const SDL_Event* event_p) {
+    auto execute_event(const SDL_Event* event_p) -> SDL_AppResult {
         ImGui::impl::process_event(event_p);
         switch (event_p->type) {
             // window handling
-            case SDL_EventType::SDL_EVENT_QUIT: _running = false; break;
+            case SDL_EventType::SDL_EVENT_QUIT: return SDL_AppResult::SDL_APP_SUCCESS;
             case SDL_EventType::SDL_EVENT_WINDOW_RESTORED: _rendering = true; break;
             case SDL_EventType::SDL_EVENT_WINDOW_MINIMIZED: _rendering = false; break;
             case SDL_EventType::SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
@@ -135,16 +126,30 @@ public:
             case SDL_EventType::SDL_EVENT_MOUSE_MOTION: Input::register_motion(event_p->motion);break;
             case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_UP: Input::register_button_up(event_p->button); break;
             case SDL_EventType::SDL_EVENT_MOUSE_BUTTON_DOWN: Input::register_button_down(event_p->button); break;
-            case SDL_EventType::SDL_EVENT_WINDOW_FOCUS_LOST: Input::flush_all(); break;
+            case SDL_EventType::SDL_EVENT_WINDOW_FOCUS_LOST: {
+                _swapchain.set_target_framerate(_fps_background);
+                Input::flush_all();
+                break;
+            }
+            case SDL_EventType::SDL_EVENT_WINDOW_FOCUS_GAINED: {
+                _swapchain.set_target_framerate(_fps_foreground);
+                Input::flush_all();
+                break;
+            }
             default: break;
         }
+        return SDL_AppResult::SDL_APP_CONTINUE;
     }
     void execute_frame() {
-        handle_inputs();
+        if (!_rendering) {
+            SDL_Delay(50);
+            return;
+        }
         if (_swapchain._resize_requested) {
             resize();
             return;
         }
+        handle_inputs();
         ImGui::impl::new_frame();
         ImGui::utils::display_fps();
 
@@ -158,7 +163,10 @@ public:
 private:
     void resize() {
         _device.waitIdle();
-        SDL_SyncWindow(_window._window_p);
+        if (!SDL_SyncWindow(_window._window_p)) {
+            fmt::println("Failed to sync window");
+            return;
+        }
         
         _scene._camera.resize(_window.size());
         _renderer.resize(_device, _vmalloc, _queues, _window.size(), _scene._camera);
@@ -178,9 +186,6 @@ private:
         Input::register_capture(SDL_GetWindowRelativeMouseMode(_window._window_p));
     }
     
-public:
-    bool _running;
-    bool _rendering;
 private:
     vk::Instance _instance;
     vk::PhysicalDevice _phys_device;
@@ -191,4 +196,7 @@ private:
     Swapchain _swapchain;
     Renderer _renderer;
     Scene _scene;
+    uint32_t _fps_foreground = 0;
+    uint32_t _fps_background = 5;
+    bool _rendering;
 };
