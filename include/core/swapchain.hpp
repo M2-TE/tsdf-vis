@@ -42,8 +42,13 @@ public:
         // query swapchain properties
         vk::SurfaceCapabilitiesKHR capabilities = phys_device.getSurfaceCapabilitiesKHR(window._surface);
         std::vector<vk::SurfaceFormatKHR> formats = phys_device.getSurfaceFormatsKHR(window._surface);
-        _extent = window.size();
         _presentation_queue = queues._universal;
+        _extent = window.size();
+        // adjust extent in case surface has changed, but no window resize event was received yet
+        if (_extent.width < capabilities.minImageExtent.width) _extent.width = capabilities.minImageExtent.width;
+        if (_extent.width > capabilities.maxImageExtent.width) _extent.width = capabilities.maxImageExtent.width;
+        if (_extent.height < capabilities.minImageExtent.height) _extent.height = capabilities.minImageExtent.height;
+        if (_extent.height > capabilities.maxImageExtent.height) _extent.height = capabilities.maxImageExtent.height;
         
         // pick color space and format
         vk::ColorSpaceKHR color_space = formats.front().colorSpace;
