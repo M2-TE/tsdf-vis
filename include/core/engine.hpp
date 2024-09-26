@@ -33,6 +33,7 @@ public:
                 // vk::KHRDynamicRenderingLocalReadExtensionName,
             },
             ._optional_extensions {
+                vk::EXTMemoryPriorityExtensionName,
                 vk::EXTPageableDeviceLocalMemoryExtensionName,
             },
             ._required_features {

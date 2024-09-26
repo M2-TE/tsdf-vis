@@ -41,14 +41,14 @@ public:
         _smaa_area_tex.destroy(device, vmalloc);
         _smaa_search_tex.destroy(device, vmalloc);
         _smaa_edges.destroy(device, vmalloc);
-        _smaa_blend.destroy(device, vmalloc);
+        _smaa_weights.destroy(device, vmalloc);
         _smaa_output.destroy(device, vmalloc);
         // destroy pipelines
         _pipe_default.destroy(device);
         _pipe_cells.destroy(device);
-        _pipe_smaa_edge_detection.destroy(device);
-        _pipe_smaa_blend_weight_calc.destroy(device);
-        _pipe_smaa_neigh_blending.destroy(device);
+        _pipe_smaa_edges.destroy(device);
+        _pipe_smaa_weights.destroy(device);
+        _pipe_smaa_blending.destroy(device);
         // destroy command pools
         device.destroyCommandPool(_command_pool);
         // destroy synchronization objects
@@ -72,6 +72,8 @@ public:
         vk::CommandBuffer cmd = _command_buffer;
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         execute_pipes(cmd, scene);
+
+        if (Keys::pressed(SDLK_P)) _smaa_enabled = !_smaa_enabled;
         if (_smaa_enabled) execute_smaa(cmd);
         cmd.end();
 
@@ -89,6 +91,7 @@ public:
         queues._universal.submit(info_submit, _ready_to_record);
 
         // present drawn image
+        // Image& output_image = _smaa_enabled ? _smaa_output : _color;
         Image& output_image = _smaa_enabled ? _smaa_output : _color;
         swapchain.present(device, output_image, _ready_to_read, _ready_to_write);
     }
@@ -113,7 +116,7 @@ private:
         // create SMAA output image with 16 bits color depth
         info_image = {
             .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16B16A16Sfloat,
+            .format = _color._format,
             .extent { extent.width, extent.height, 1 },
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment |
@@ -140,7 +143,7 @@ private:
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eSampled,
         };
-        _smaa_blend.init(info_image);
+        _smaa_weights.init(info_image);
 
         // load smaa lookup textures
         info_image = {
@@ -150,7 +153,7 @@ private:
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_search_tex.init(info_image);
-        _smaa_search_tex.load_texture(device, vmalloc, queues, smaa::get_search_tex());
+        _smaa_search_tex.load_texture(device, vmalloc, queues, smaa::get_flipped_search_tex());
         info_image = {
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8G8Unorm,
@@ -158,7 +161,7 @@ private:
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
         };
         _smaa_area_tex.init(info_image);
-        _smaa_area_tex.load_texture(device, vmalloc, queues, smaa::get_area_tex());
+        _smaa_area_tex.load_texture(device, vmalloc, queues, smaa::get_flipped_area_tex());
         // transition smaa textures to their permanent layouts
         vk::CommandBuffer cmd = queues.oneshot_begin(device);
         Image::TransitionInfo info_transition {
@@ -203,28 +206,28 @@ private:
         info_pipeline = {
             .device = device, .extent = extent,
             .color_formats = { _smaa_edges._format },
-            .vs_path = "smaa/edge_detection.vert", .fs_path = "smaa/edge_detection.frag",
+            .vs_path = "smaa/edges.vert", .fs_path = "smaa/edges.frag",
         };
-        _pipe_smaa_edge_detection.init(info_pipeline);
+        _pipe_smaa_edges.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
-            .color_formats = { _smaa_blend._format },
-            .vs_path = "smaa/blend_weight_calc.vert", .fs_path = "smaa/blend_weight_calc.frag",
+            .color_formats = { _smaa_weights._format },
+            .vs_path = "smaa/weights.vert", .fs_path = "smaa/weights.frag",
         };
-        _pipe_smaa_blend_weight_calc.init(info_pipeline);
+        _pipe_smaa_weights.init(info_pipeline);
         info_pipeline = {
             .device = device, .extent = extent,
             .color_formats = { _color._format },
-            .vs_path = "smaa/neigh_blending.vert", .fs_path = "smaa/neigh_blending.frag",
+            .vs_path = "smaa/blending.vert", .fs_path = "smaa/blending.frag",
         };
-        _pipe_smaa_neigh_blending.init(info_pipeline);
+        _pipe_smaa_blending.init(info_pipeline);
         // update SMAA input texture descriptors
-        _pipe_smaa_edge_detection.write_descriptor(device, 0, 0, _color);
-        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 0, _smaa_edges);
-        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 1, _smaa_area_tex);
-        _pipe_smaa_blend_weight_calc.write_descriptor(device, 0, 2, _smaa_search_tex);
-        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 0, _color);
-        _pipe_smaa_neigh_blending.write_descriptor(device, 0, 1, _smaa_blend);
+        _pipe_smaa_edges.write_descriptor(device, 0, 0, _color);
+        _pipe_smaa_weights.write_descriptor(device, 0, 0, _smaa_edges);
+        _pipe_smaa_weights.write_descriptor(device, 0, 1, _smaa_area_tex);
+        _pipe_smaa_weights.write_descriptor(device, 0, 2, _smaa_search_tex);
+        _pipe_smaa_blending.write_descriptor(device, 0, 0, _smaa_weights);
+        _pipe_smaa_blending.write_descriptor(device, 0, 1, _color);
     }
     
     void execute_pipes(vk::CommandBuffer cmd, Scene& scene) {
@@ -273,17 +276,17 @@ private:
         // SMAA edge detection
         _color.transition_layout(info_transition_read);
         _smaa_edges.transition_layout(info_transition_write);
-        _pipe_smaa_edge_detection.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
+        _pipe_smaa_edges.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
 
         // SMAA blending weight calculation
         _smaa_edges.transition_layout(info_transition_read);
-        _smaa_blend.transition_layout(info_transition_write);
-        _pipe_smaa_blend_weight_calc.execute(cmd, _smaa_blend, vk::AttachmentLoadOp::eClear);
+        _smaa_weights.transition_layout(info_transition_write);
+        _pipe_smaa_weights.execute(cmd, _smaa_weights, vk::AttachmentLoadOp::eClear);
 
         // SMAA neighborhood blending
-        _smaa_blend.transition_layout(info_transition_read);
+        _smaa_weights.transition_layout(info_transition_read);
         _smaa_output.transition_layout(info_transition_write);
-        _pipe_smaa_neigh_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
+        _pipe_smaa_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
     }
 
 private:
@@ -303,15 +306,15 @@ private:
     Image _smaa_area_tex; // constant lookup tex
     Image _smaa_search_tex; // constant lookup tex
     Image _smaa_edges; // intermediate SMAA output
-    Image _smaa_blend; // intermediate SMAA output
+    Image _smaa_weights; // intermediate SMAA output
     Image _smaa_output; // final SMAA output
-    bool _smaa_enabled = false;
+    bool _smaa_enabled = true;
 
     // pipelines
     Pipeline::Graphics _pipe_default;
     Pipeline::Graphics _pipe_cells;
     // SMAA
-    Pipeline::Graphics _pipe_smaa_edge_detection;
-    Pipeline::Graphics _pipe_smaa_blend_weight_calc;
-    Pipeline::Graphics _pipe_smaa_neigh_blending;
+    Pipeline::Graphics _pipe_smaa_edges;
+    Pipeline::Graphics _pipe_smaa_weights;
+    Pipeline::Graphics _pipe_smaa_blending;
 };
