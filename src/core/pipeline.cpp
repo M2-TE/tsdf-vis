@@ -15,7 +15,7 @@ auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
 {
 	SpvReflectResult result;
 	// get number of descriptor sets
-	uint32_t refl_desc_sets_n;
+	uint32_t refl_desc_sets_n = 0;
 	result = reflection.EnumerateEntryPointDescriptorSets("main", &refl_desc_sets_n, nullptr);
 	if (result != SPV_REFLECT_RESULT_SUCCESS) fmt::println("shader reflection error: {}", (uint32_t)result);
 	std::vector<SpvReflectDescriptorSet*> refl_desc_sets(refl_desc_sets_n);
