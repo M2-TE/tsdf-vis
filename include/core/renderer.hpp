@@ -90,10 +90,9 @@ public:
             .pSignalSemaphores = &_ready_to_read,
         };
         queues._universal.submit(info_submit, _ready_to_record);
-
+        
         // present drawn image
-        Image& output_image = _smaa_enabled ? _smaa_output : _color;
-        swapchain.present(device, output_image, _ready_to_read, _ready_to_write);
+        swapchain.present(device, *_final_image_p, _ready_to_read, _ready_to_write);
     }
     
 private:
@@ -174,20 +173,20 @@ private:
             .device = device, .extent = extent,
             .color_formats = { _color._format },
             .depth_format = _depth_stencil._format,
+            .depth_write = vk::True, .depth_test = vk::True,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .depth_write = true, .depth_test = true,
             .vs_path = "defaults/default.vert", .fs_path = "defaults/default.frag",
         });
         _pipe_cells.init({
             .device = device, .extent = extent,
             .color_formats = { _color._format },
             .depth_format = _depth_stencil._format,
+            .blend_enabled = vk::True,
+            .depth_write = vk::False, .depth_test = vk::True,
             .poly_mode = vk::PolygonMode::eLine,
             .primitive_topology = vk::PrimitiveTopology::eLineStrip,
             .primitive_restart = true,
             .cull_mode = vk::CullModeFlagBits::eNone,
-            .blend_enabled = true,
-            .depth_write = false, .depth_test = true,
             .vs_path = "extra/cells.vert", .fs_path = "extra/cells.frag",
         });
         // write camera descriptor to pipelines
@@ -216,12 +215,32 @@ private:
         _pipe_smaa_edges.init({
             .device = device, .extent = extent,
             .color_formats = { _smaa_edges._format },
+            .stencil_format = _depth_stencil._format,
+            .stencil_test = vk::True,
+            .stencil_ops = {
+                .failOp = vk::StencilOp::eKeep,
+                .passOp = vk::StencilOp::eReplace,
+                .compareOp = vk::CompareOp::eAlways,
+                .compareMask = 0xff,
+                .writeMask = 0xff,
+                .reference = 1,
+            },
             .vs_path = "smaa/edges.vert", .vs_spec = &smaa_spec_info,
             .fs_path = "smaa/edges.frag", .fs_spec = &smaa_spec_info,
         });
         _pipe_smaa_weights.init({
             .device = device, .extent = extent,
             .color_formats = { _smaa_weights._format },
+            .stencil_format = _depth_stencil._format,
+            .stencil_test = vk::True,
+            .stencil_ops = {
+                .failOp = vk::StencilOp::eKeep,
+                .passOp = vk::StencilOp::eKeep,
+                .compareOp = vk::CompareOp::eEqual,
+                .compareMask = 0xff,
+                .writeMask = 0xff,
+                .reference = 1,
+            },
             .vs_path = "smaa/weights.vert", .vs_spec = &smaa_spec_info,
             .fs_path = "smaa/weights.frag", .fs_spec = &smaa_spec_info,
         });
@@ -269,6 +288,7 @@ private:
         if (scene._render_grid) {
             _pipe_cells.execute(cmd, scene_data._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
         }
+        _final_image_p = &_color;
     }
     void execute_smaa(vk::CommandBuffer cmd) {
         Image::TransitionInfo info_transition_read {
@@ -286,17 +306,18 @@ private:
         // SMAA edge detection
         _color.transition_layout(info_transition_read);
         _smaa_edges.transition_layout(info_transition_write);
-        _pipe_smaa_edges.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear);
+        _pipe_smaa_edges.execute(cmd, _smaa_edges, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eLoad);
 
         // SMAA blending weight calculation
         _smaa_edges.transition_layout(info_transition_read);
         _smaa_weights.transition_layout(info_transition_write);
-        _pipe_smaa_weights.execute(cmd, _smaa_weights, vk::AttachmentLoadOp::eClear);
+        _pipe_smaa_weights.execute(cmd, _smaa_weights, vk::AttachmentLoadOp::eClear, _depth_stencil, vk::AttachmentLoadOp::eLoad);
 
         // SMAA neighborhood blending
         _smaa_weights.transition_layout(info_transition_read);
         _smaa_output.transition_layout(info_transition_write);
         _pipe_smaa_blending.execute(cmd, _smaa_output, vk::AttachmentLoadOp::eClear);
+        _final_image_p = &_smaa_output;
     }
 
 private:
@@ -310,11 +331,12 @@ private:
     vk::CommandBuffer _command_buffer;
 
     // Images
-    Image _color;
     DepthStencil _depth_stencil;
-    // SMAA todo: stencil optimizations
-    Image _smaa_area; // constant lookup tex
-    Image _smaa_search; // constant lookup tex
+    Image _color;
+    Image* _final_image_p = &_color;
+    // SMAA
+    Image _smaa_area;
+    Image _smaa_search;
     Image _smaa_edges;
     Image _smaa_weights;
     Image _smaa_output;

@@ -142,15 +142,21 @@ namespace Pipeline
 		struct CreateInfo {
 			vk::Device device;
 			vk::Extent2D extent;
+			//
 			std::vector<vk::Format> color_formats;
 			vk::Format depth_format = vk::Format::eUndefined;
+			vk::Format stencil_format = vk::Format::eUndefined;
+			vk::Bool32 blend_enabled = false;
+			vk::Bool32 depth_write = false;
+			vk::Bool32 depth_test = false;
+			vk::Bool32 stencil_test = false;
+			vk::StencilOpState stencil_ops = {};
+			//
 			vk::PolygonMode poly_mode = vk::PolygonMode::eFill;
 			vk::PrimitiveTopology primitive_topology = vk::PrimitiveTopology::eTriangleList;
 			vk::Bool32 primitive_restart = false;
 			vk::CullModeFlags cull_mode = vk::CullModeFlagBits::eBack;
-			vk::Bool32 blend_enabled = false;
-			vk::Bool32 depth_write = false;
-			vk::Bool32 depth_test = false;
+			//
 			std::string_view vs_path;
 			vk::SpecializationInfo* vs_spec = nullptr;
 			std::string_view fs_path;
@@ -232,7 +238,8 @@ namespace Pipeline
 				.depthWriteEnable = info.depth_write,
 				.depthCompareOp = vk::CompareOp::eLessOrEqual,
 				.depthBoundsTestEnable = false,
-				.stencilTestEnable = false,
+				.stencilTestEnable = info.stencil_test,
+				.front = info.stencil_ops,
 			};
 			vk::PipelineColorBlendAttachmentState info_blend_attach {
 				.blendEnable = info.blend_enabled,
@@ -259,7 +266,7 @@ namespace Pipeline
 				.colorAttachmentCount = (uint32_t)info.color_formats.size(),
 				.pColorAttachmentFormats = info.color_formats.data(),
 				.depthAttachmentFormat = info.depth_format,
-				.stencilAttachmentFormat = info.depth_format,
+				.stencilAttachmentFormat = info.stencil_format,
 			};
 
 			vk::GraphicsPipelineCreateInfo pipeInfo {
@@ -280,17 +287,22 @@ namespace Pipeline
 			auto [result, pipeline] = info.device.createGraphicsPipeline(nullptr, pipeInfo);
 			if (result != vk::Result::eSuccess) fmt::println("error creating graphics pipeline");
 			_pipeline = pipeline;
-			_render_area = vk::Rect2D({ 0,0 }, info.extent);
 			// clean up shader modules
 			info.device.destroyShaderModule(vs_module);
 			info.device.destroyShaderModule(fs_module);
+			// set persistent options
+			_render_area = vk::Rect2D({ 0,0 }, info.extent);
+			_depth_test = info.depth_test;
+			_depth_write = info.depth_write;
+			_stencil_test = info.stencil_test;
+			_stencil_ops = info.stencil_ops;
 		}
 		
 		// draw mesh with color and depth attachments
 		template<typename Vertex, typename Index>
 		void execute(vk::CommandBuffer cmd, Mesh<Vertex, Index>& mesh, 
 			Image& color_dst, vk::AttachmentLoadOp color_load, 
-			DepthStencil& depth_dst, vk::AttachmentLoadOp depth_load)
+			DepthStencil& depth_stencil_dst, vk::AttachmentLoadOp depth_stencil_load)
 		{
 			vk::RenderingAttachmentInfo info_color_attach {
 				.imageView = color_dst._view,
@@ -300,21 +312,21 @@ namespace Pipeline
 				.storeOp = vk::AttachmentStoreOp::eStore,
 				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 0 } } }
 			};
-			vk::RenderingAttachmentInfo info_depth_attach {
-				.imageView = depth_dst._view,
-				.imageLayout = depth_dst._last_layout,
+			vk::RenderingAttachmentInfo info_depth_stencil_attach {
+				.imageView = depth_stencil_dst._view,
+				.imageLayout = depth_stencil_dst._last_layout,
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
-				.loadOp = depth_load,
+				.loadOp = depth_stencil_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue = { .depthStencil { 1.0f } },
+				.clearValue = { .depthStencil { .depth = 1.0f, .stencil = 0 } },
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
 				.layerCount = 1,
 				.colorAttachmentCount = 1,
 				.pColorAttachments = &info_color_attach,
-				.pDepthAttachment = &info_depth_attach,
-				.pStencilAttachment = nullptr,
+				.pDepthAttachment = _depth_test || _depth_write ? &info_depth_stencil_attach : nullptr,
+				.pStencilAttachment = _stencil_test ? &info_depth_stencil_attach : nullptr,
 			};
 			cmd.beginRendering(info_render);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
@@ -374,8 +386,46 @@ namespace Pipeline
 			// draw end //
 			cmd.endRendering();
 		}
-		
-		// draw fullscreen mesh using oversized triangle
+
+		// draw fullscreen triangle with color and depth attachments
+		void execute(vk::CommandBuffer cmd,
+			Image& color_dst, vk::AttachmentLoadOp color_load,
+			DepthStencil& depth_stencil_dst, vk::AttachmentLoadOp depth_stencil_load)
+		{
+			vk::RenderingAttachmentInfo info_color_attach {
+				.imageView = color_dst._view,
+				.imageLayout = color_dst._last_layout,
+				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
+				.loadOp = color_load,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 0 } } }
+			};
+			vk::RenderingAttachmentInfo info_depth_stencil_attach {
+				.imageView = depth_stencil_dst._view,
+				.imageLayout = depth_stencil_dst._last_layout,
+				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
+				.loadOp = depth_stencil_load,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.clearValue = { .depthStencil { .depth = 1.0f, .stencil = 0 } },
+			};
+			vk::RenderingInfo info_render {
+				.renderArea = _render_area,
+				.layerCount = 1,
+				.colorAttachmentCount = 1,
+				.pColorAttachments = &info_color_attach,
+				.pDepthAttachment = _depth_test || _depth_write ? &info_depth_stencil_attach : nullptr,
+				.pStencilAttachment = _stencil_test ? &info_depth_stencil_attach : nullptr,
+			};
+			cmd.beginRendering(info_render);
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+			if (_desc_sets.size() > 0) {
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipeline_layout, 0, _desc_sets, {});
+			}
+			cmd.draw(3, 1, 0, 0);
+			cmd.endRendering();
+		}
+
+		// draw fullscreen  triangle with only color attachment
 		void execute(vk::CommandBuffer cmd,
 			Image& color_dst, vk::AttachmentLoadOp color_load)
 		{
@@ -406,5 +456,9 @@ namespace Pipeline
 	
 	private:
 		vk::Rect2D _render_area;
+		vk::Bool32 _depth_test;
+		vk::Bool32 _depth_write;
+		vk::Bool32 _stencil_test;
+		vk::StencilOpState _stencil_ops;
 	};
 }
