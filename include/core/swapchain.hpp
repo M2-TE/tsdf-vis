@@ -77,7 +77,7 @@ public:
                 capabilities.maxImageCount == 0 ? UINT32_MAX : capabilities.maxImageCount),
             .imageFormat = _format,
             .imageColorSpace = color_space,
-            .imageExtent = window.size(),
+            .imageExtent = _extent,
             .imageArrayLayers = 1,
             .imageUsage = vk::ImageUsageFlagBits::eTransferDst,
             .imageSharingMode = vk::SharingMode::eExclusive,
@@ -133,7 +133,7 @@ public:
     void resize(vk::PhysicalDevice physDevice, vk::Device device, Window& window, Queues& queues) {
         destroy_partial(device);
         init(physDevice, device, window, queues);
-        fmt::println("Swapchain resized to: {}x{}", window.size().width, window.size().height);
+        fmt::println("Swapchain resized to: {}x{}", _extent.width, _extent.height);
     }
     void present(vk::Device device, Image& src_image, vk::Semaphore src_ready_to_read, vk::Semaphore src_ready_to_write) {
         // wait for this frame's fence to be signaled and reset it
