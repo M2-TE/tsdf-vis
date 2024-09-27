@@ -158,14 +158,15 @@ auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string
 					.addressModeV = vk::SamplerAddressMode::eClampToEdge,
 					.addressModeW = vk::SamplerAddressMode::eClampToEdge,
 					.mipLodBias = 0.0f,
-					.anisotropyEnable = false,
+					.anisotropyEnable = vk::False,
 					.maxAnisotropy = 1.0f,
-					.compareEnable = false,
+					.compareEnable = vk::False,
 					.compareOp = vk::CompareOp::eAlways,
 					.minLod = 0.0f,
-					.maxLod = vk::LodClampNone,
-					.borderColor = vk::BorderColor::eFloatOpaqueWhite,
-					.unnormalizedCoordinates = false,
+					.maxLod = 0.0f,
+					// .maxLod = vk::LodClampNone,
+					.borderColor = vk::BorderColor::eIntOpaqueBlack,
+					.unnormalizedCoordinates = vk::False,
 				};
 				_immutable_samplers.push_back(device.createSampler(info_sampler));
 				// write index into binding, as pointers can still be unstable while vector grows

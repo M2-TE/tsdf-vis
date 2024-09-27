@@ -154,21 +154,19 @@ namespace Pipeline
 			std::string_view vs_path;
 			std::string_view fs_path;
 		};
-		void init(CreateInfo& info) {
+		void init(const CreateInfo& info) {
 			// reflect shader contents
 			auto [bind_desc, attr_descs] = reflect(info.device, { info.vs_path, info.fs_path });
 
 			// create pipeline layout (TODO: make configurable in CreateInfo)
-			vk::PushConstantRange pcr {
-				.stageFlags = vk::ShaderStageFlagBits::eVertex,
-				.offset = 0,
-				.size = sizeof(vk::DeviceAddress),
-			};
+			// vk::PushConstantRange pcr {
+			// 	.stageFlags = vk::ShaderStageFlagBits::eVertex,
+			// 	.offset = 0,
+			// 	.size = sizeof(vk::DeviceAddress),
+			// };
 			vk::PipelineLayoutCreateInfo layoutInfo {
 				.setLayoutCount = (uint32_t)_desc_set_layouts.size(),
-				.pSetLayouts = _desc_set_layouts.data(),
-				.pushConstantRangeCount = 1,
-				.pPushConstantRanges = &pcr,
+				.pSetLayouts = _desc_set_layouts.data()
 			};
 			_pipeline_layout = info.device.createPipelineLayout(layoutInfo);
 
@@ -301,7 +299,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 1 } } }
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 0 } } }
 			};
 			vk::RenderingAttachmentInfo info_depth_attach {
 				.imageView = depth_dst._view,
@@ -349,7 +347,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 1 } } }
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 0 } } }
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,
@@ -388,7 +386,7 @@ namespace Pipeline
 				.resolveMode = 	vk::ResolveModeFlagBits::eNone,
 				.loadOp = color_load,
 				.storeOp = vk::AttachmentStoreOp::eStore,
-				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 1 } } }
+				.clearValue { .color { std::array<float, 4>{ 0, 0, 0, 0 } } }
 			};
 			vk::RenderingInfo info_render {
 				.renderArea = _render_area,

@@ -11,6 +11,7 @@ layout(location = 0) out vec2 out_edges;
 layout(binding = 0) uniform sampler2D tex_color;
 
 void main() {
-    // out_edges = SMAALumaEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
     out_edges = SMAAColorEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
+    // out_edges = SMAALumaEdgeDetectionPS(in_texcoord, in_offsets, tex_color);
+    // out_edges = SMAA_DepthEdgeDetectionPS(in_texcoord, in_offsets, _);
 }

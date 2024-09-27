@@ -38,8 +38,8 @@ public:
         // destroy images
         _color.destroy(device, vmalloc);
         _depth_stencil.destroy(device, vmalloc);
-        _smaa_area_tex.destroy(device, vmalloc);
-        _smaa_search_tex.destroy(device, vmalloc);
+        _smaa_area.destroy(device, vmalloc);
+        _smaa_search.destroy(device, vmalloc);
         _smaa_edges.destroy(device, vmalloc);
         _smaa_weights.destroy(device, vmalloc);
         _smaa_output.destroy(device, vmalloc);
@@ -91,7 +91,6 @@ public:
         queues._universal.submit(info_submit, _ready_to_record);
 
         // present drawn image
-        // Image& output_image = _smaa_enabled ? _smaa_output : _color;
         Image& output_image = _smaa_enabled ? _smaa_output : _color;
         swapchain.present(device, output_image, _ready_to_read, _ready_to_write);
     }
@@ -99,7 +98,7 @@ public:
 private:
     void init_images(vk::Device device, vma::Allocator vmalloc, Queues& queues, vk::Extent2D extent) {
         // create image with 16 bits color depth
-        Image::CreateInfo info_image {
+        _color.init({
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR16G16B16A16Sfloat,
             .extent { extent.width, extent.height, 1 },
@@ -107,14 +106,13 @@ private:
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eTransferSrc | 
                 vk::ImageUsageFlagBits::eSampled,
-        };
-        _color.init(info_image);
+        });
 
         // create depth stencil image
         _depth_stencil.init(device, vmalloc, { extent.width, extent.height, 1 });
 
         // create SMAA output image with 16 bits color depth
-        info_image = {
+        _smaa_output.init({
             .device = device, .vmalloc = vmalloc,
             .format = _color._format,
             .extent { extent.width, extent.height, 1 },
@@ -122,46 +120,41 @@ private:
                 vk::ImageUsageFlagBits::eColorAttachment |
                 vk::ImageUsageFlagBits::eTransferSrc |
                 vk::ImageUsageFlagBits::eSampled
-        };
-        _smaa_output.init(info_image);
+        });
 
         // create smaa edges and blend images
-        info_image = {
+        _smaa_edges.init({
             .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16Sfloat,
+            .format = vk::Format::eR8G8Unorm,
             .extent { extent.width, extent.height, 1 },
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eSampled,
-        };
-        _smaa_edges.init(info_image);
-        info_image = {
+        });
+        _smaa_weights.init({
             .device = device, .vmalloc = vmalloc,
-            .format = vk::Format::eR16G16B16A16Sfloat,
+            .format = vk::Format::eR8G8B8A8Unorm,
             .extent { extent.width, extent.height, 1 },
             .usage = 
                 vk::ImageUsageFlagBits::eColorAttachment | 
                 vk::ImageUsageFlagBits::eSampled,
-        };
-        _smaa_weights.init(info_image);
+        });
 
         // load smaa lookup textures
-        info_image = {
+        _smaa_search.init({
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8Unorm,
             .extent = smaa::get_search_extent(),
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
-        };
-        _smaa_search_tex.init(info_image);
-        _smaa_search_tex.load_texture(device, vmalloc, queues, smaa::get_flipped_search_tex());
-        info_image = {
+        });
+        _smaa_search.load_texture(device, vmalloc, queues, smaa::get_search_tex());
+        _smaa_area.init({
             .device = device, .vmalloc = vmalloc,
             .format = vk::Format::eR8G8Unorm,
             .extent = smaa::get_area_extent(),
             .usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst,
-        };
-        _smaa_area_tex.init(info_image);
-        _smaa_area_tex.load_texture(device, vmalloc, queues, smaa::get_flipped_area_tex());
+        });
+        _smaa_area.load_texture(device, vmalloc, queues, smaa::get_area_tex());
         // transition smaa textures to their permanent layouts
         vk::CommandBuffer cmd = queues.oneshot_begin(device);
         Image::TransitionInfo info_transition {
@@ -170,22 +163,21 @@ private:
             .dst_stage = vk::PipelineStageFlagBits2::eFragmentShader,
             .dst_access = vk::AccessFlagBits2::eColorAttachmentRead
         };
-        _smaa_search_tex.transition_layout(info_transition);
-        _smaa_area_tex.transition_layout(info_transition);
+        _smaa_search.transition_layout(info_transition);
+        _smaa_area.transition_layout(info_transition);
         queues.oneshot_end(device, cmd);
     }
     void init_pipelines(vk::Device device, vk::Extent2D extent, Camera& camera) {
         // create graphics pipelines
-        Pipeline::Graphics::CreateInfo info_pipeline {
+        _pipe_default.init({
             .device = device, .extent = extent,
             .color_formats = { _color._format },
             .depth_format = _depth_stencil._format,
             .cull_mode = vk::CullModeFlagBits::eNone,
             .depth_write = true, .depth_test = true,
             .vs_path = "defaults/default.vert", .fs_path = "defaults/default.frag",
-        };
-        _pipe_default.init(info_pipeline);
-        info_pipeline = {
+        });
+        _pipe_cells.init({
             .device = device, .extent = extent,
             .color_formats = { _color._format },
             .depth_format = _depth_stencil._format,
@@ -196,36 +188,32 @@ private:
             .blend_enabled = true,
             .depth_write = false, .depth_test = true,
             .vs_path = "extra/cells.vert", .fs_path = "extra/cells.frag",
-        };
-        _pipe_cells.init(info_pipeline);
+        });
         // write camera descriptor to pipelines
         _pipe_default.write_descriptor(device, 0, 0, camera._buffer);
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer);
 
         // create SMAA pipelines
-        info_pipeline = {
+        _pipe_smaa_edges.init({
             .device = device, .extent = extent,
             .color_formats = { _smaa_edges._format },
             .vs_path = "smaa/edges.vert", .fs_path = "smaa/edges.frag",
-        };
-        _pipe_smaa_edges.init(info_pipeline);
-        info_pipeline = {
+        });
+        _pipe_smaa_weights.init({
             .device = device, .extent = extent,
             .color_formats = { _smaa_weights._format },
             .vs_path = "smaa/weights.vert", .fs_path = "smaa/weights.frag",
-        };
-        _pipe_smaa_weights.init(info_pipeline);
-        info_pipeline = {
+        });
+        _pipe_smaa_blending.init({
             .device = device, .extent = extent,
             .color_formats = { _color._format },
             .vs_path = "smaa/blending.vert", .fs_path = "smaa/blending.frag",
-        };
-        _pipe_smaa_blending.init(info_pipeline);
+        });
         // update SMAA input texture descriptors
         _pipe_smaa_edges.write_descriptor(device, 0, 0, _color);
-        _pipe_smaa_weights.write_descriptor(device, 0, 0, _smaa_edges);
-        _pipe_smaa_weights.write_descriptor(device, 0, 1, _smaa_area_tex);
-        _pipe_smaa_weights.write_descriptor(device, 0, 2, _smaa_search_tex);
+        _pipe_smaa_weights.write_descriptor(device, 0, 0, _smaa_area);
+        _pipe_smaa_weights.write_descriptor(device, 0, 1, _smaa_search);
+        _pipe_smaa_weights.write_descriptor(device, 0, 2, _smaa_edges);
         _pipe_smaa_blending.write_descriptor(device, 0, 0, _smaa_weights);
         _pipe_smaa_blending.write_descriptor(device, 0, 1, _color);
     }
@@ -256,7 +244,7 @@ private:
         }
         
         // draw cells
-        if (scene._render_grid){
+        if (scene._render_grid) {
             _pipe_cells.execute(cmd, scene_data._grid._query_points, _color, vk::AttachmentLoadOp::eLoad, _depth_stencil, vk::AttachmentLoadOp::eLoad);
         }
     }
@@ -303,11 +291,11 @@ private:
     Image _color;
     DepthStencil _depth_stencil;
     // SMAA todo: stencil optimizations
-    Image _smaa_area_tex; // constant lookup tex
-    Image _smaa_search_tex; // constant lookup tex
-    Image _smaa_edges; // intermediate SMAA output
-    Image _smaa_weights; // intermediate SMAA output
-    Image _smaa_output; // final SMAA output
+    Image _smaa_area; // constant lookup tex
+    Image _smaa_search; // constant lookup tex
+    Image _smaa_edges;
+    Image _smaa_weights;
+    Image _smaa_output;
     bool _smaa_enabled = true;
 
     // pipelines
