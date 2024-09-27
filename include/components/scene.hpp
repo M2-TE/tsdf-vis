@@ -17,7 +17,7 @@ struct Scene {
         
         _data._grid.init(vmalloc, queues, "data/hsfd23/hashgrid.grid");
         _data._mesh_main.init(vmalloc, queues, "data/hsfd23/mesh.ply");
-        _data._mesh_main_grey.init(vmalloc, queues, "data/hsfd23/mesh.ply", glm::vec3(0.5, 0.5, 0.5));
+        // _data._mesh_main_grey.init(vmalloc, queues, "data/hsfd23/mesh.ply", glm::vec3(0.5, 0.5, 0.5));
 
         // std::random_device rd;
         // std::mt19937 gen(rd());

@@ -7,7 +7,7 @@
 #include "core/swapchain.hpp"
 #include "core/pipeline.hpp"
 #include "core/smaa.hpp"
-#include "core//image.hpp"
+#include "core/image.hpp"
 #include "components/scene.hpp"
 
 class Renderer {
