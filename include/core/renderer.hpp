@@ -73,6 +73,7 @@ public:
         cmd.begin({ .flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
         execute_pipes(cmd, scene);
 
+        // optionally run SMAA
         if (Keys::pressed(SDLK_P)) _smaa_enabled = !_smaa_enabled;
         if (_smaa_enabled) execute_smaa(cmd);
         cmd.end();
@@ -194,20 +195,41 @@ private:
         _pipe_cells.write_descriptor(device, 0, 0, camera._buffer);
 
         // create SMAA pipelines
+        glm::aligned_vec4 SMAA_RT_METRICS = {
+            1.0 / (double)extent.width,
+            1.0 / (double)extent.height,
+            (double)extent.width,
+            (double)extent.height
+        };
+        std::array<vk::SpecializationMapEntry, 4> smaa_spec_entries {
+            vk::SpecializationMapEntry { .constantID = 0, .offset = 0, .size = 4 },
+            vk::SpecializationMapEntry { .constantID = 1, .offset = 4, .size = 4 },
+            vk::SpecializationMapEntry { .constantID = 2, .offset = 8, .size = 4 },
+            vk::SpecializationMapEntry { .constantID = 3, .offset = 12, .size = 4 }
+        };
+        vk::SpecializationInfo smaa_spec_info = {
+            .mapEntryCount = smaa_spec_entries.size(),
+            .pMapEntries = smaa_spec_entries.data(),
+            .dataSize = sizeof(SMAA_RT_METRICS),
+            .pData = &SMAA_RT_METRICS
+        };
         _pipe_smaa_edges.init({
             .device = device, .extent = extent,
             .color_formats = { _smaa_edges._format },
-            .vs_path = "smaa/edges.vert", .fs_path = "smaa/edges.frag",
+            .vs_path = "smaa/edges.vert", .vs_spec = &smaa_spec_info,
+            .fs_path = "smaa/edges.frag", .fs_spec = &smaa_spec_info,
         });
         _pipe_smaa_weights.init({
             .device = device, .extent = extent,
             .color_formats = { _smaa_weights._format },
-            .vs_path = "smaa/weights.vert", .fs_path = "smaa/weights.frag",
+            .vs_path = "smaa/weights.vert", .vs_spec = &smaa_spec_info,
+            .fs_path = "smaa/weights.frag", .fs_spec = &smaa_spec_info,
         });
         _pipe_smaa_blending.init({
             .device = device, .extent = extent,
             .color_formats = { _color._format },
-            .vs_path = "smaa/blending.vert", .fs_path = "smaa/blending.frag",
+            .vs_path = "smaa/blending.vert", .vs_spec = &smaa_spec_info,
+            .fs_path = "smaa/blending.frag", .fs_spec = &smaa_spec_info,
         });
         // update SMAA input texture descriptors
         _pipe_smaa_edges.write_descriptor(device, 0, 0, _color);

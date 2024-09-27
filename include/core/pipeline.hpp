@@ -152,18 +152,15 @@ namespace Pipeline
 			vk::Bool32 depth_write = false;
 			vk::Bool32 depth_test = false;
 			std::string_view vs_path;
+			vk::SpecializationInfo* vs_spec = nullptr;
 			std::string_view fs_path;
+			vk::SpecializationInfo* fs_spec = nullptr;
 		};
 		void init(const CreateInfo& info) {
 			// reflect shader contents
 			auto [bind_desc, attr_descs] = reflect(info.device, { info.vs_path, info.fs_path });
 
-			// create pipeline layout (TODO: make configurable in CreateInfo)
-			// vk::PushConstantRange pcr {
-			// 	.stageFlags = vk::ShaderStageFlagBits::eVertex,
-			// 	.offset = 0,
-			// 	.size = sizeof(vk::DeviceAddress),
-			// };
+			// create pipeline layout
 			vk::PipelineLayoutCreateInfo layoutInfo {
 				.setLayoutCount = (uint32_t)_desc_set_layouts.size(),
 				.pSetLayouts = _desc_set_layouts.data()
@@ -178,11 +175,13 @@ namespace Pipeline
 					.stage = vk::ShaderStageFlagBits::eVertex,
 					.module = vs_module,
 					.pName = "main",
+					.pSpecializationInfo = info.vs_spec,
 				},
 				vk::PipelineShaderStageCreateInfo {
 					.stage = vk::ShaderStageFlagBits::eFragment,
 					.module = fs_module,
 					.pName = "main",
+					.pSpecializationInfo = info.fs_spec,
 				}
 			}};
 
