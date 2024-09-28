@@ -48,6 +48,7 @@ public:
             ._required_vk13_features {
                 .synchronization2 = true,
                 .dynamicRendering = true,
+                .maintenance4 = true,
             },
             ._required_queues {
                 vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute | vk::QueueFlagBits::eTransfer,
