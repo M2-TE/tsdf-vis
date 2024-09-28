@@ -44,7 +44,7 @@ if (${Vulkan_glslangValidator_FOUND})
         add_custom_command(
             COMMENT "Compiling shader: ${FILE_NAME}"
             OUTPUT  "${SPIRV_FILE}"
-            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --enhanced-msgs --quiet -Os -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
+            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --enhanced-msgs --quiet -Os -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" --target-env vulkan1.3 "${GLSL_FILE}" -o "${SPIRV_FILE}"
             DEPENDS "${GLSL_FILE}")
         list(APPEND SPIRV_BINARY_FILES "${SPIRV_FILE}")
     endforeach(GLSL_FILE)
