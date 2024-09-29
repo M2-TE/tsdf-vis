@@ -1,14 +1,13 @@
 #include <map>
 #include <set>
 #include <span>
-#include <spirv_reflect.h>
-#include <cmrc/cmrc.hpp>
 #include <fmt/base.h>
+#include <spvrc/spvrc.hpp>
+#include <spirv_reflect.h>
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_to_string.hpp>
 #include <vulkan/vulkan_format_traits.hpp>
 #include "core/pipeline.hpp"
-CMRC_DECLARE(shaders);
 
 auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
     -> std::vector<SpvReflectDescriptorSet*>
@@ -27,37 +26,29 @@ auto get_refl_desc_sets(spv_reflect::ShaderModule& reflection)
 auto Pipeline::Base::compile(vk::Device device, std::string_view path)
     -> vk::ShaderModule
 {
-	cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
-	if (!fs.exists(path.data())) {
-		fmt::println("could not find shader: {}", path.data());
+	auto shader_data = spvrc::load(path);
+	vk::ShaderModuleCreateInfo info_shader {
+		.codeSize = shader_data.size() * sizeof(uint32_t),
+		.pCode = shader_data.data(),
+	};
+	if (shader_data.size() == 0) {
+		fmt::println("Error: could not find shader: {}", path.data());
 		exit(-1);
 	}
-	cmrc::file file = fs.open(path.data());
-    vk::ShaderModuleCreateInfo info_shader {
-        .codeSize = file.size(),
-        .pCode = reinterpret_cast<const uint32_t*>(file.cbegin()),
-    };
 	return device.createShaderModule(info_shader);
 }
 auto Pipeline::Base::reflect(vk::Device device, const vk::ArrayProxy<std::string_view>& shader_paths)
     -> std::pair< vk::VertexInputBindingDescription, std::vector<vk::VertexInputAttributeDescription>>
 {
-	// read raw shader sources
-	std::vector<std::pair<size_t, const uint32_t*>> shaders;
-	for (std::string_view path: shader_paths) {
-		cmrc::embedded_filesystem fs = cmrc::shaders::get_filesystem();
-		if (!fs.exists(path.data())) {
-			fmt::println("could not find shader: {}", path.data());
-			exit(-1);
-		}
-		cmrc::file file = fs.open(path.data());
-		shaders.emplace_back(file.size(), reinterpret_cast<const uint32_t*>(file.cbegin()));
-	}
-
 	// reflect shaders
 	std::vector<spv_reflect::ShaderModule> reflections;
-	for (auto& shader: shaders) {
-		reflections.emplace_back(shader.first, shader.second);
+	for (std::string_view path: shader_paths) {
+		auto shader_data = spvrc::load(path);
+		if (shader_data.size() == 0) {
+			fmt::println("Error: could not find shader: {}", path.data());
+			exit(-1);
+		}
+		reflections.emplace_back(shader_data);
 	}
 
 	// enumerate over input stages
