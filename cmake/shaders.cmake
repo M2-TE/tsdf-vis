@@ -31,9 +31,19 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.comp")
 find_package(Vulkan COMPONENTS glslangValidator)
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders/_deps")
+set(GLSLANG_CLI_PARAMS 
+    # --keep-uncalled
+    --enhanced-msgs
+    --spirv-val
+    --quiet
+    -Os
+    -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders"
+    -I"${smaa_SOURCE_DIR}"
+    --target-env "vulkan1.3")
 if (${Vulkan_glslangValidator_FOUND})
     # compile glsl to spirv
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders")
     file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
@@ -44,7 +54,8 @@ if (${Vulkan_glslangValidator_FOUND})
         add_custom_command(
             COMMENT "Compiling shader: ${FILE_NAME}"
             OUTPUT  "${SPIRV_FILE}"
-            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} --enhanced-msgs --quiet -Os -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" --target-env vulkan1.3 "${GLSL_FILE}" -o "${SPIRV_FILE}"
+            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} ${GLSLANG_CLI_PARAMS} --depfile "${SPIRV_FILE}.d" "${GLSL_FILE}" -o "${SPIRV_FILE}"
+            DEPFILE "${SPIRV_FILE}.d"
             DEPENDS "${GLSL_FILE}")
         list(APPEND SPIRV_BINARY_FILES "${SPIRV_FILE}")
     endforeach(GLSL_FILE)
@@ -91,7 +102,6 @@ else()
     FetchContent_MakeAvailable(glslang)
 
     # compile glsl to spirv
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/shaders")
     file(GLOB_RECURSE GLSL_SOURCE_FILES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"
         "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag"
@@ -102,7 +112,8 @@ else()
         add_custom_command(
             COMMENT "Compiling shader: ${FILE_NAME}"
             OUTPUT  "${SPIRV_FILE}"
-            COMMAND glslang-standalone --enhanced-msgs --quiet -Os -I"${CMAKE_CURRENT_SOURCE_DIR}/shaders" -I"${smaa_SOURCE_DIR}" -V "${GLSL_FILE}" -o "${SPIRV_FILE}"
+            COMMAND glslang-standalone ${GLSLANG_CLI_PARAMS} --depfile "${SPIRV_FILE}.d" "${GLSL_FILE}" -o "${SPIRV_FILE}"
+            DEPFILE "${SPIRV_FILE}.d"
             DEPENDS "${GLSL_FILE}" glslang-standalone)
         list(APPEND SPIRV_BINARY_FILES "${SPIRV_FILE}")
     endforeach(GLSL_FILE)
