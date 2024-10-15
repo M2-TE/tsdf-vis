@@ -6,7 +6,7 @@
 #include <vk_mem_alloc.hpp>
 #include <fmt/base.h>
 #include "core/input.hpp"
-#include "core/buffer.hpp"
+#include "core/device_buffer.hpp"
 
 struct Camera {
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {

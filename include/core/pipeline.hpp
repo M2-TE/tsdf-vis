@@ -5,7 +5,7 @@
 #include <fmt/base.h>
 #include "components/mesh/mesh.hpp"
 #include "core/image.hpp"
-#include "core/buffer.hpp"
+#include "core/device_buffer.hpp"
 
 namespace Pipeline
 {
