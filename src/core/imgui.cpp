@@ -43,7 +43,7 @@ namespace ImGui
                 .poolSizeCount = (uint32_t)pool_sizes.size(), 
                 .pPoolSizes = pool_sizes.data(),
             };
-            s_imgui_desc_pool = device.createDescriptorPool(info_desc_pool);
+            s_imgui_desc_pool = (vk::DescriptorPool)device.createDescriptorPool(info_desc_pool);
 
             // initialize vulkan backend
             ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -53,7 +53,7 @@ namespace ImGui
                 .Device = device,
                 .QueueFamily = 0, // TODO: get queue family
                 .Queue = queue,
-                .DescriptorPool = s_imgui_desc_pool,
+                .DescriptorPool = (VkDescriptorPool)s_imgui_desc_pool,
                 .RenderPass = nullptr,
                 .MinImageCount = 3,
                 .ImageCount = 3,
@@ -72,7 +72,8 @@ namespace ImGui
                 },
                 .Allocator = nullptr,
                 .CheckVkResultFn = nullptr,
-                .MinAllocationSize = 0, // TODO: get min allocation size
+                // .MinAllocationSize = 0,
+                .MinAllocationSize = 1024 * 1024, // silence validation layers
 
             };
             ImGui_ImplVulkan_Init(&info_imgui_vk);

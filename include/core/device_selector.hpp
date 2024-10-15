@@ -21,23 +21,10 @@ struct DeviceSelector {
         fmt::println("Available devices:");
         for (vk::PhysicalDevice device: phys_devices) {
             auto props = device.getProperties();
-            fmt::println("-> {}", (const char*)props.deviceName);
-
             bool passed = true;
-            // check vulkan api version
             passed &= check_api_ver(props);
-            // check requested extensions
             passed &= check_extensions(required_extensions, device);
-            // retrieve available core features
-            auto feature_chain = device.getFeatures2<
-                vk::PhysicalDeviceFeatures2,
-                vk::PhysicalDeviceVulkan11Features,
-                vk::PhysicalDeviceVulkan12Features,
-                vk::PhysicalDeviceVulkan13Features>();
-            passed &= check_features(feature_chain.get<vk::PhysicalDeviceFeatures2>().features);
-            passed &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan11Features>());
-            passed &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan12Features>());
-            passed &= check_features(feature_chain.get<vk::PhysicalDeviceVulkan13Features>());
+            passed &= check_core_features(device);
             passed &= check_presentation(device, surface);
 
             // add device candidate if it passed tests
@@ -52,6 +39,8 @@ struct DeviceSelector {
                 if (props.deviceType == _preferred_device_type) memory_size += 1ull << 63ull;
                 matching_devices.emplace_back(device, memory_size);
             }
+            std::string pass_str = passed ? "passed" : "failed";
+            fmt::println("-> {}: {}", pass_str, (const char*)props.deviceName);
         }
 
         // optionally bail out
@@ -70,65 +59,14 @@ struct DeviceSelector {
         fmt::println("Picked device: {}", (const char*)phys_device.getProperties().deviceName);
         return phys_device;
     }
-    auto create_logical_device(vk::PhysicalDevice physical_device) -> std::pair<vk::Device, std::vector<uint32_t>> {
-        // set up chain of requested device features
-        vk::PhysicalDeviceFeatures2 required_features {
-            .pNext = &_required_vk11_features,
-            .features = _required_features,
-        };
-        _required_vk11_features.pNext = &_required_vk12_features;
-        _required_vk12_features.pNext = &_required_vk13_features;
-        void** chain_tail_pp = &_required_vk13_features.pNext;
+    auto create_logical_device(vk::PhysicalDevice physical_device, void* additional_features_p) -> std::pair<vk::Device, std::vector<uint32_t>>;
 
-        // in case some of these are requested and available
-        vk::PhysicalDeviceMemoryPriorityFeaturesEXT memory_priority {
-            .memoryPriority = true
-        };
-        vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageable_memory {
-            .pageableDeviceLocalMemory = true,
-        };
 
-        // enable optional features if available
-        auto available_extensions = physical_device.enumerateDeviceExtensionProperties();
-        for (const char* ext: _optional_extensions) {
-            for (auto& available: available_extensions) {
-                if (strcmp(ext, available.extensionName) == 0) {
-                    _required_extensions.push_back(ext);
-                    if (strcmp(ext, vk::EXTMemoryPriorityExtensionName) == 0) {
-                        *chain_tail_pp = &memory_priority;
-                        chain_tail_pp = &memory_priority.pNext;
-                    }
-                    if (strcmp(ext, vk::EXTPageableDeviceLocalMemoryExtensionName) == 0) {
-                        *chain_tail_pp = &pageable_memory;
-                        chain_tail_pp = &pageable_memory.pNext;
-                    }
-                    break;
-                }
-            }
-        }
-        
-        // create device
-        auto [info_queues, queue_mappings] = create_queue_infos(physical_device);
-        vk::DeviceCreateInfo info_device {
-            .pNext = &required_features,
-            .queueCreateInfoCount = (uint32_t)info_queues.size(),
-            .pQueueCreateInfos = info_queues.data(),
-            .enabledExtensionCount = (uint32_t)_required_extensions.size(),
-            .ppEnabledExtensionNames = _required_extensions.data(),
-        };
-
-        vk::Device device = physical_device.createDevice(info_device);
-        return std::make_pair(device, queue_mappings);
-    }
-
+    // TODO: have this selector retain a list of candidates, which gets filtered out later by use calling check_feature_support for a specific feature?
 private:
     bool check_api_ver(vk::PhysicalDeviceProperties& props);
     bool check_extensions(std::set<std::string> required_extensions, vk::PhysicalDevice physical_device);
-    bool check_features(vk::PhysicalDeviceFeatures& features);
-    bool check_features(vk::PhysicalDeviceVulkan11Features& features);
-    bool check_features(vk::PhysicalDeviceVulkan12Features& features);
-    bool check_features(vk::PhysicalDeviceVulkan13Features& features);
-    
+    bool check_core_features(vk::PhysicalDevice phys_device);
     bool check_presentation(vk::PhysicalDevice physical_device, vk::SurfaceKHR surface) {
         // check if presentation capabilties are required
         if (surface == nullptr) return true;
@@ -210,13 +148,13 @@ public:
     uint32_t _required_major = 1;
     uint32_t _required_minor = 0;
     vk::PhysicalDeviceType _preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
-    std::vector<const char*> _required_extensions;
-    std::vector<const char*> _optional_extensions;
-    vk::PhysicalDeviceFeatures _required_features;
-    vk::PhysicalDeviceVulkan11Features _required_vk11_features;
-    vk::PhysicalDeviceVulkan12Features _required_vk12_features;
-    vk::PhysicalDeviceVulkan13Features _required_vk13_features;
-    std::vector<vk::QueueFlags> _required_queues;
+    std::vector<const char*> _required_extensions = {};
+    std::vector<const char*> _optional_extensions = {};
+    vk::PhysicalDeviceFeatures _required_features = {};
+    vk::PhysicalDeviceVulkan11Features _required_vk11_features = {};
+    vk::PhysicalDeviceVulkan12Features _required_vk12_features = {};
+    vk::PhysicalDeviceVulkan13Features _required_vk13_features = {};
+    std::vector<vk::QueueFlags> _required_queues = {};
 private:
     static constexpr float queue_priority = 1.0f;
 };

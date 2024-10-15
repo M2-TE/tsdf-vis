@@ -217,7 +217,7 @@ private:
             .color_formats = { _smaa_edges._format },
             .stencil_format = _depth_stencil._format,
             .stencil_test = vk::True,
-            .stencil_ops = {
+            .stencil_ops_front = {
                 .failOp = vk::StencilOp::eKeep,
                 .passOp = vk::StencilOp::eReplace,
                 .compareOp = vk::CompareOp::eAlways,
@@ -233,7 +233,7 @@ private:
             .color_formats = { _smaa_weights._format },
             .stencil_format = _depth_stencil._format,
             .stencil_test = vk::True,
-            .stencil_ops = {
+            .stencil_ops_front = {
                 .failOp = vk::StencilOp::eKeep,
                 .passOp = vk::StencilOp::eKeep,
                 .compareOp = vk::CompareOp::eEqual,

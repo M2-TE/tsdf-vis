@@ -71,7 +71,7 @@ struct Window {
         // SDL: create surface
         VkSurfaceKHR surfaceTemp;
         if (SDL_Vulkan_CreateSurface(_window_p, instance, nullptr, &surfaceTemp)) fmt::println("{}", SDL_GetError());
-        _surface = surfaceTemp;
+        _surface = (vk::SurfaceKHR)surfaceTemp;
 
         return instance;
     }

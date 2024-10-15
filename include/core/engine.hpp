@@ -30,7 +30,7 @@ public:
             ._preferred_device_type = vk::PhysicalDeviceType::eDiscreteGpu,
             ._required_extensions {
                 vk::KHRSwapchainExtensionName,
-                // vk::KHRDynamicRenderingLocalReadExtensionName,
+                vk::KHRMaintenance5ExtensionName,
             },
             ._optional_extensions {
                 vk::EXTMemoryPriorityExtensionName,
@@ -60,8 +60,20 @@ public:
         _phys_device = device_selector.select_physical_device(_instance, _window._surface);
 
         // Vulkan: create device
+        vk::PhysicalDeviceMaintenance5FeaturesKHR maintenance5 {
+            .pNext = nullptr,
+            .maintenance5 = vk::True,
+        };
+        vk::PhysicalDeviceMemoryPriorityFeaturesEXT memory_priority {
+            .pNext = &maintenance5,
+            .memoryPriority = vk::True,
+        };
+        vk::PhysicalDevicePageableDeviceLocalMemoryFeaturesEXT pageable_memory {
+            .pNext = &memory_priority,
+            .pageableDeviceLocalMemory = vk::True,
+        };
         std::vector<uint32_t> queue_mappings;
-        std::tie(_device, queue_mappings) = device_selector.create_logical_device(_phys_device);
+        std::tie(_device, queue_mappings) = device_selector.create_logical_device(_phys_device, &pageable_memory);
         
         // Vulkan: dynamic dispatcher init 3/3
         VULKAN_HPP_DEFAULT_DISPATCHER.init(_device);
@@ -72,7 +84,13 @@ public:
             .vkGetDeviceProcAddr = VULKAN_HPP_DEFAULT_DISPATCHER.vkGetDeviceProcAddr,
         };
         vma::AllocatorCreateInfo info_vmalloc {
-            .flags = vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
+            .flags = 
+                vma::AllocatorCreateFlagBits::eKhrBindMemory2 |
+                vma::AllocatorCreateFlagBits::eKhrMaintenance4 |
+                vma::AllocatorCreateFlagBits::eKhrMaintenance5 |
+                vma::AllocatorCreateFlagBits::eExtMemoryPriority |
+                // vma::AllocatorCreateFlagBits::eBufferDeviceAddress |
+                vma::AllocatorCreateFlagBits::eKhrDedicatedAllocation,
             .physicalDevice = _phys_device,
             .device = _device,
             .pVulkanFunctions = &vk_funcs,

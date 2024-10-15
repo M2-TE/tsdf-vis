@@ -91,7 +91,7 @@ public:
         };
         vk::SwapchainKHR old_swapchain = _swapchain;
         _swapchain = device.createSwapchainKHR(info_swapchain);
-        if (old_swapchain != nullptr && _images.size() > 0) device.destroySwapchainKHR(old_swapchain);
+        if (old_swapchain != vk::SwapchainKHR(nullptr) && _images.size() > 0) device.destroySwapchainKHR(old_swapchain);
         _images.clear(); // old images were owned by previous swapchain
 
         // retrieve and wrap swapchain images

@@ -23,26 +23,43 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     "VULKAN_HPP_NO_CONSTRUCTORS"
     "VULKAN_HPP_NO_SMART_HANDLE"
     "VULKAN_HPP_NO_SPACESHIP_OPERATOR"
+    "VULKAN_HPP_TYPESAFE_CONVERSION=0"
     "VULKAN_HPP_DISPATCH_LOADER_DYNAMIC")
 
 # create vk_layer_settings.txt for validation layers
 get_target_property(VALIDATION_LAYER_OVERRIDE_FOLDER ${PROJECT_NAME} RUNTIME_OUTPUT_DIRECTORY)
 file(MAKE_DIRECTORY "${VALIDATION_LAYER_OVERRIDE_FOLDER}")
 FILE(WRITE "${VALIDATION_LAYER_OVERRIDE_FOLDER}/vk_layer_settings.txt"
-"# on by default:
+"# Enable core validation
 khronos_validation.validate_core = true
+
+# Enable thread safety validation
 khronos_validation.thread_safety = true
-khronos_validation.validate_best_practices = false
+
+# Enable best practices validation for all vendors
+khronos_validation.validate_best_practices = true
 khronos_validation.validate_best_practices_arm = true
 khronos_validation.validate_best_practices_amd = true
 khronos_validation.validate_best_practices_img = true
 khronos_validation.validate_best_practices_nvidia = true
-# off by default:
+
+# Enable synchronization validation
 khronos_validation.validate_sync = true
 khronos_validation.syncval_shader_accesses_heuristic = true
+
+# Enable GPU-assisted validation
 khronos_validation.gpuav_select_instrumented_shaders = true
 khronos_validation.gpuav_debug_validate_instrumented_shaders = true
-# etc:
-khronos_validation.validate_best_practices = true
-khronos_validation.report_flags = info,warn,error")
-# add "perf" flag for very nosy validation
+
+# Filter out certain messages
+# 601872502 -> info about validation layers being enabled
+# -2001217138 -> outdated swapchain (its properly handled already)
+# 11102936 -> memory priority missing (imgui backend does not set these)
+# -954943182 -> not reusing allocations (imgui rebuild triggers this)
+# -920984000 -> bound vertex buffer wasnt used (imgui again)
+# -488404154 -> lod clamping (imgui sets -1000 to 1000 clamping)
+# -855582553 -> use of primitive restart is not recommended (we dont care)
+khronos_validation.message_id_filter = 601872502,-2001217138,11102936,-954943182,-920984000,-488404154,-855582553
+
+# Set report flags to include info, warnings, errors, and performance issues
+khronos_validation.report_flags = info,warn,error,perf")
