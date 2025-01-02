@@ -171,7 +171,7 @@ public:
         }
         handle_inputs();
         ImGui::impl::new_frame();
-        ImGui::utils::display_fps();
+        // ImGui::utils::display_fps();
 
         _scene.update_safe();
         _renderer.wait(_device);

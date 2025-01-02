@@ -15,16 +15,15 @@ struct Scene {
     void init(vma::Allocator vmalloc, const vk::ArrayProxy<uint32_t>& queues) {
         _camera.init(vmalloc, queues);
         
-        _data._grid.init(vmalloc, queues, "data/hsfd23/hashgrid.grid");
-        _data._mesh_main.init(vmalloc, queues, "data/hsfd23/mesh.ply");
+        _data._mesh_main.init(vmalloc, queues, "data/v2/mesh.ply");
+        _data._grid.init(vmalloc, queues, "data/v2/hashgrid.grid");
         // _data._mesh_main_grey.init(vmalloc, queues, "data/hsfd23/mesh.ply", glm::vec3(0.5, 0.5, 0.5));
 
         // std::random_device rd;
         // std::mt19937 gen(rd());
         // std::uniform_real_distribution<float> dis(0.0, 1.0);
-        // static constexpr std::size_t subs_n = 30;
-        // _data._mesh_subs.resize(subs_n);
-        // for (size_t i = 0; i < subs_n; i++) {
+        // _data._mesh_subs.resize(0);
+        // for (size_t i = 0; i < _data._mesh_subs.size(); i++) {
         //     // glm::vec3 color = { dis(gen), dis(gen), dis(gen) };
         //     glm::vec3 color = { 1.0, 0.1, 0.1 };
         //     _data._mesh_subs[i].init(vmalloc, queues, std::format("data/hsfd23/mesh_{}.ply", i), color);

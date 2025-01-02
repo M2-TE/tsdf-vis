@@ -1,8 +1,8 @@
 #pragma once
 #include <set>
+#include <vulkan/vulkan.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include <vulkan/vulkan.hpp>
 #include <fmt/base.h>
 
 struct Window {
@@ -45,6 +45,7 @@ struct Window {
             bool available = false;
             for (auto& layer: layer_props) {
                 auto res = std::strcmp(layer.layerName, validation_layer.data());
+                fmt::println("{}", std::string(layer.layerName));
                 if (res) available = true;
             }
             if (available) layers.push_back(validation_layer.data());
