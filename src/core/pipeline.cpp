@@ -1,6 +1,6 @@
 #include <map>
 #include <span>
-#include <fmt/base.h>
+#include <fmt/core.h>
 #include <spirv_reflect.h>
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_to_string.hpp>

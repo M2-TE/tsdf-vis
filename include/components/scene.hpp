@@ -1,6 +1,6 @@
 #pragma once
 // #include <random>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include "components/transform/camera.hpp"
 #include "components/extra/grid.hpp"
 #include "components/extra/plymesh.hpp"

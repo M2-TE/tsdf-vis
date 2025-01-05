@@ -2,7 +2,7 @@
 #include <string_view>
 #include <vulkan/vulkan.hpp>
 #include <spvrc/spvrc.hpp>
-#include <fmt/base.h>
+#include <fmt/core.h>
 #include "components/mesh/mesh.hpp"
 #include "core/image.hpp"
 #include "core/device_buffer.hpp"

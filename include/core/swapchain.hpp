@@ -2,6 +2,7 @@
 #include <chrono>
 #include <thread>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_to_string.hpp>
 #include "core/window.hpp"
 #include "core/queues.hpp"
 #include "core/imgui.hpp"
@@ -53,6 +54,11 @@ public:
         // pick color space and format
         vk::ColorSpaceKHR color_space = formats.front().colorSpace;
         _format = formats.front().format;
+
+        for (auto format: formats) {
+            fmt::println("Available format: {}, color space: {}", vk::to_string(format.format), vk::to_string(format.colorSpace));
+        }
+
         for (auto format: formats) {
             bool format_requirement = 
                 format.format == vk::Format::eR8G8B8A8Srgb ||

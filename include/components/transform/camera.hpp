@@ -4,7 +4,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
-#include <fmt/base.h>
+#include <fmt/core.h>
 #include "core/input.hpp"
 #include "core/device_buffer.hpp"
 

@@ -1,7 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.hpp>
-#include <fmt/base.h>
+#include <fmt/core.h>
 
 template<typename T>
 struct DeviceBuffer {

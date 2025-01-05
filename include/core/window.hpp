@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include <fmt/base.h>
+#include <fmt/core.h>
 
 struct Window {
     auto init(int width, int height, std::string name) -> vk::Instance {
@@ -45,7 +45,6 @@ struct Window {
             bool available = false;
             for (auto& layer: layer_props) {
                 auto res = std::strcmp(layer.layerName, validation_layer.data());
-                fmt::println("{}", std::string(layer.layerName));
                 if (res) available = true;
             }
             if (available) layers.push_back(validation_layer.data());
